@@ -1,542 +1,857 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portfolio Analyzer — Single File</title>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Portfolio Analyzer — Single File (v7.26)</title>
 
-  <!-- Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/advancedFormat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/minMax.js"></script>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/advancedFormat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/minMax.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <style>
-    :root{
-      --bg:#0b0f14; --bg2:#0f141b; --fg:#e5edf5; --muted:#a9b8c7;
-      --accent:#5ac8fa; --accent2:#8a7aff; --card:#121923; --border:#1f2a36;
-      --green:#1bb36b; --yellow:#c9a227; --red:#d9534f;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; color:var(--fg);
-      font-family:'Roboto', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background:linear-gradient(180deg, var(--bg) 0%, #090c10 100%);
-    }
-    .wrap{max-width:1300px; margin:0 auto; padding:20px 18px 40px}
-    .title{font-size:22px; font-weight:700; letter-spacing:.3px; display:flex; align-items:center; gap:10px;
-      font-family:'Montserrat','Roboto',ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial}
-    .badge{font-size:12px; padding:4px 8px; border:1px solid var(--border); border-radius:999px; color:var(--muted)}
+<style>
+:root{
+  --bg:#0b0f14; --bg2:#0f141b; --fg:#e5edf5; --muted:#a9b8c7;
+  --accent:#5ac8fa; --accent2:#8a7aff; --card:#121923; --border:#1f2a36;
+  --green:#1bb36b; --yellow:#c9a227; --red:#d9534f;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:'Roboto',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+  background:linear-gradient(180deg,var(--bg) 0%,#090c10 100%);
+  color:var(--fg);
+}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 18px 40px}
+.title{font-size:22px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:10px;font-family:'Montserrat','Roboto',sans-serif}
+.badge{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted)}
 
-    .panel{display:grid; gap:10px; background:var(--bg2); border:1px solid var(--border); padding:14px; border-radius:16px; margin:16px 0 20px}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .spacer{flex:1}
+.panel{display:grid;gap:10px;background:var(--bg2);border:1px solid var(--border);padding:14px;border-radius:16px;margin:16px 0 20px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
 
-    .btn{background:linear-gradient(180deg, #1a2633 0%, #111824 100%); color:var(--fg); border:1px solid var(--border);
-      padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:8px;
-      transition:transform .05s ease, background .2s ease, border .2s ease}
-    .btn:hover{transform:translateY(-1px); border-color:#2b3b4d}
-    .btn:active{transform:translateY(0)}
-    .btn.secondary{background:#0e141d}
-    .btn[disabled]{opacity:.55; cursor:not-allowed; transform:none}
+.btn{
+  background:linear-gradient(180deg,#1a2633 0%,#111824 100%);
+  color:var(--fg); border:1px solid var(--border); padding:10px 14px; border-radius:12px;
+  cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:8px;
+  transition:transform .05s ease, background .2s ease, border .2s ease;
+}
+.btn:hover{transform:translateY(-1px);border-color:#2b3b4d}
+.btn:active{transform:translateY(0)}
+.btn.secondary{background:#0e141d}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
 
-    input[type="date"], select{
-      background:#0e151e; color:var(--fg); border:1px solid var(--border); padding:10px 12px; border-radius:12px; outline:none;
-      color-scheme: dark; padding-right:40px; /* accommodate custom icon */
-    }
-    input[type="file"]{display:none}
-    .file-pill{display:inline-flex; align-items:center; gap:8px; background:#111a25; border:1px solid var(--border);
-      color:var(--muted); padding:6px 8px; border-radius:999px; font-size:12px}
-    .file-pill .name{color:#d0d9e2}
-    .file-pill .xbtn{appearance:none; border:0; background:transparent; color:#9ab0c6; cursor:pointer; padding:0 4px; font-size:14px; line-height:1}
-    .file-pill .xbtn:hover{color:#fff}
+input[type="date"]{
+  background:#0e151e;color:var(--fg);border:1px solid var(--border);
+  padding:10px 12px;border-radius:12px;outline:none;color-scheme:dark;
+}
+input[type="file"]{display:none}
 
-    /* Custom visible date button; hide native unreliable indicators */
-    .date-wrap{position:relative; display:inline-block}
-    .date-wrap input[type="date"]{padding-right:40px}
-    .picker-btn{position:absolute; top:50%; right:8px; transform:translateY(-50%); width:24px; height:24px; display:flex;
-      align-items:center; justify-content:center; border:1px solid var(--border); border-radius:8px; background:#0e141d; color:var(--fg);
-      cursor:pointer; opacity:.95}
-    .picker-btn:hover{border-color:#2b3b4d; opacity:1}
-    .picker-btn svg{width:16px; height:16px; stroke:#d0d9e2; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
-    input[type="date"]::-webkit-calendar-picker-indicator{display:none !important; pointer-events:none !important; opacity:0 !important}
-    input[type="date"]::-moz-calendar-picker-indicator{display:none !important; pointer-events:none !important}
+.file-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#111a25;border:1px solid var(--border);color:var(--muted);
+  padding:6px 8px;border-radius:999px;font-size:12px
+}
+.file-pill .name{color:#d0d9e2}
+.file-pill .note{font-size:11px;color:#9ab0c6}
+.file-pill .xbtn{appearance:none;border:0;background:transparent;color:#9ab0c6;cursor:pointer;padding:0 4px;font-size:14px;line-height:1}
+.file-pill .xbtn:hover{color:#fff}
 
-    .grid{display:grid; gap:16px}
-    .grid.cols-1{grid-template-columns:1fr}
-    .grid.cols-2{grid-template-columns:1fr}
-    @media(min-width:1050px){.grid.cols-2{grid-template-columns:1fr 1fr}}
+.grid{display:grid;gap:16px}
+.grid.cols-2{grid-template-columns:1fr}
+.grid.cols-1{grid-template-columns:1fr}
+@media(min-width:1050px){
+  .grid.cols-2{grid-template-columns:1fr 1fr}
+  .grid.cols-1{grid-template-columns:1fr}
+}
 
-    .card{background:var(--card); border:1px solid var(--border); padding:14px; border-radius:16px}
-    .card h3{margin:0 0 8px; font-size:16px; font-weight:700; color:#d8e6f5; font-family:'Montserrat','Roboto',ui-sans-serif,system-ui;}
-    .subtle{color:var(--muted); font-size:13px}
+.card{background:var(--card);border:1px solid var(--border);padding:14px;border-radius:16px}
+.card h3{margin:0 0 8px;font-size:16px;font-weight:700;color:#d8e6f5;font-family:'Montserrat','Roboto',sans-serif}
+.subtle{color:var(--muted);font-size:13px}
 
-    .chart{height:420px}
-    .chart.wide{height:520px}
+.chart{height:420px}
+.chart.wide{height:520px}
 
-    table{width:100%; border-collapse:separate; border-spacing:0; font-size:13px}
-    thead th{position:sticky; top:0; background:#0f1823; z-index:1}
-    th,td{padding:10px 12px; border-bottom:1px solid var(--border); text-align:right}
-    th:first-child, td:first-child{text-align:left}
-    .table-wrap{max-height:380px; overflow:auto; border:1px solid var(--border); border-radius:12px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+thead th{position:sticky;top:0;background:#0f1823;z-index:1}
+th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:right}
+th:first-child,td:first-child{text-align:left}
+.table-wrap{max-height:380px;overflow:auto;border:1px solid var(--border);border-radius:12px}
 
-    .heat-0{background:rgba(27,179,107,.25)} .heat-1{background:rgba(201,162,39,.25)} .heat-2{background:rgba(217,83,79,.25)} .no-heat{background:transparent}
-    .toolbar{display:flex; gap:8px; justify-content:flex-end; margin:10px 2px}
-    .toggle{display:inline-flex; background:#0f1823; border:1px solid var(--border); border-radius:12px; overflow:hidden}
-    .toggle button{border:0; padding:8px 12px; color:var(--muted); background:transparent; cursor:pointer}
-    .toggle button.active{background:#152336; color:#fff}
-    .hidden{display:none}
-    .footnote{font-size:12px; color:var(--muted); margin-top:4px}
+.heat-0{background:rgba(27,179,107,.25)}
+.heat-1{background:rgba(201,162,39,.25)}
+.heat-2{background:rgba(217,83,79,.25)}
+.no-heat{background:transparent}
 
-    /* Force thin semi-transparent spikelines if Plotly ever draws them */
-    .js-plotly-plot .vspikeline, .js-plotly-plot .hspikeline{ stroke:rgba(208,217,226,0.35)!important; stroke-width:1px!important; shape-rendering:geometricPrecision }
-  </style>
+.toolbar{display:flex;gap:8px;justify-content:flex-end;margin:10px 2px}
+
+.toggle{display:inline-flex;background:#0f1823;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.toggle button{border:0;padding:8px 12px;color:var(--muted);background:transparent;cursor:pointer}
+.toggle button.active{background:#152336;color:#fff}
+
+.hidden{display:none}
+.footnote{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* visible calendar icon */
+.date-wrap{position:relative;display:inline-block}
+.date-wrap input[type="date"]{padding-right:40px}
+.picker-btn{
+  position:absolute;top:50%;right:8px;transform:translateY(-50%);
+  width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);border-radius:8px;background:#0e141d;color:var(--fg);
+  cursor:pointer;opacity:.95
+}
+.picker-btn:hover{border-color:#2b3b4d;opacity:1}
+.picker-btn svg{width:16px;height:16px;stroke:#d0d9e2;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;pointer-events:none !important;opacity:0 !important}
+
+/* combo */
+#comboCard{margin-top:14px}
+.weights{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.weight-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f1823;border:1px solid var(--border);padding:10px 12px;border-radius:12px}
+.weight-item label{font-weight:600}
+.weight-item input{width:120px;background:#0e151e;color:var(--fg);border:1px solid var(--border);padding:8px 10px;border-radius:10px;text-align:right}
+.badge.warn{border-color:#d9534f;color:#f6c7c5}
+.badge.ok{border-color:#1bb36b;color:#bff0d6}
+
+/* ultra-thin spikelines */
+.js-plotly-plot .vspikeline,.js-plotly-plot .hspikeline{
+  stroke:rgba(208,217,226,0.5)!important;stroke-width:1px!important;shape-rendering:geometricPrecision;stroke-linecap:butt
+}
+</style>
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="title">
-      Portfolio Analyzer <span id="freqBadge" class="badge">–</span>
-    </div>
+<div class="wrap">
+  <div class="title">Portfolio Analyzer <span id="freqBadge" class="badge">–</span></div>
 
-    <div class="panel">
-      <div class="row">
-        <label class="btn" for="fileInput">📤 Upload CSVs</label>
-        <input id="fileInput" type="file" accept=".csv" multiple />
-        <div id="fileList" class="row"></div>
-      </div>
-      <div class="row">
-        <div class="row" style="gap:6px">
-          <span class="subtle" style="align-self:center">Start date</span>
-          <span class="date-wrap"><input id="startDate" type="date" /></span>
-          <span class="subtle" style="align-self:center">End date</span>
-          <span class="date-wrap"><input id="endDate" type="date" /></span>
-        </div>
-        <button id="fullRangeBtn" class="btn secondary">⏱️ Full range</button>
-      </div>
-      <div class="row">
-        <button id="downloadMerged" class="btn" disabled>⬇️ Download merged.csv</button>
-        <span class="subtle" id="rangeNote"></span>
-      </div>
+  <!-- Top Panel -->
+  <div class="panel">
+    <div class="row">
+      <label class="btn" for="fileInput">📤 Upload CSVs</label>
+      <input id="fileInput" type="file" accept=".csv,text/csv" multiple/>
+      <div id="fileList" class="row"></div>
     </div>
-
-    <div class="card hidden" id="comboCard">
-      <h3>Combo Builder</h3>
-      <div class="row">
-        <label class="btn secondary" style="gap:6px"><input id="comboEnable" type="checkbox"> Enable combo</label>
-        <button class="btn secondary" id="comboEqualBtn">Equal weights</button>
-        <button class="btn secondary" id="comboApplyBtn">Update weights</button>
-        <div class="spacer"></div>
-        <span class="badge" id="comboTotal">Total: 100% — perfect</span>
+    <div class="row">
+      <div class="row" style="gap:6px">
+        <span class="subtle">Start date</span>
+        <span class="date-wrap"><input id="startDate" type="date"/></span>
+        <span class="subtle">End date</span>
+        <span class="date-wrap"><input id="endDate" type="date"/></span>
       </div>
-      <div id="comboWeights" class="weights" style="display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));"></div>
-      <div class="footnote">Type numbers, then click <b>Update weights</b>. Total updates live and hints how much to add/remove to reach 100%.</div>
+      <button id="fullRangeBtn" class="btn secondary">⏱️ Full range</button>
     </div>
-
-    <div class="row" style="margin:12px 0">
-      <div class="toggle" id="retMode">
-        <button data-mode="simple" class="active">Cumulative — Simple</button>
-        <button data-mode="log">Cumulative — Log</button>
-      </div>
-      <div class="spacer"></div>
-      <div class="toggle" id="quickRanges">
-        <button data-range="10Y">10Y</button>
-        <button data-range="5Y">5Y</button>
-        <button data-range="1Y">1Y</button>
-        <button data-range="YTD">YTD</button>
-        <button data-range="All" class="active">All</button>
-      </div>
-    </div>
-
-    <div class="grid cols-1">
-      <div class="card">
-        <h3>Cumulative Returns</h3>
-        <div id="cumChart" class="chart wide"></div>
-      </div>
-      <div class="card">
-        <h3>Drawdowns</h3>
-        <div id="ddChart" class="chart wide"></div>
-      </div>
-    </div>
-
-    <div class="grid cols-2" style="margin-top:16px">
-      <div class="card">
-        <h3>Financial Stats</h3>
-        <div class="toolbar">
-          <button class="btn secondary" id="statsSwitchAxesBtn">Switch axes</button>
-          <button class="btn secondary" id="statsCsvBtn">CSV</button>
-          <button class="btn secondary" id="statsXlsBtn">XLS</button>
-        </div>
-        <div class="table-wrap"><table id="statsTable"></table></div>
-        <div class="footnote">Assumes risk-free rate = 0. Annualization uses detected frequency (252 for daily, 12 for monthly).</div>
-      </div>
-      <div class="card">
-        <h3>Correlation Matrix (returns)</h3>
-        <div class="toolbar">
-          <button class="btn secondary" id="corrCsvBtn">CSV</button>
-          <button class="btn secondary" id="corrXlsBtn">XLS</button>
-        </div>
-        <div class="table-wrap"><table id="corrTable"></table></div>
-        <div class="footnote">Cells: ≤0.6 green, 0.6–0.8 yellow, &gt;0.8 red. 1.0 unshaded.</div>
-      </div>
-      <div class="card">
-        <h3>Correlation Matrix (negative returns)</h3>
-        <div class="toolbar">
-          <button class="btn secondary" id="corrNegCsvBtn">CSV</button>
-          <button class="btn secondary" id="corrNegXlsBtn">XLS</button>
-        </div>
-        <div class="table-wrap"><table id="corrNegTable"></table></div>
-        <div class="footnote">Only includes time steps where both tickers' returns are negative.</div>
-      </div>
+    <div class="row">
+      <button id="downloadMerged" class="btn" disabled>⬇️ Download merged.csv</button>
+      <span class="subtle" id="rangeNote"></span>
     </div>
   </div>
 
-  <script>
-    // Day.js
-    dayjs.extend(window.dayjs_plugin_customParseFormat);
-    dayjs.extend(window.dayjs_plugin_advancedFormat);
-    dayjs.extend(window.dayjs_plugin_minMax);
+  <!-- Coverage Timeline -->
+  <div class="card hidden" id="coverageCard">
+    <h3>Data Coverage (uploaded files)</h3>
+    <!-- reduced spacing ~ two thirds: from 180px -> 60px -->
+    <div id="timelineChart" class="chart" style="height:60px"></div>
+    <div class="footnote">Each bar shows the date range present in the uploaded CSV for that ticker. X-axis ticks are years.</div>
+  </div>
 
-    const DATE_FORMATS = [
-      'YYYY-MM-DD','YYYY/MM/DD','YYYY.MM.DD',
-      'MM/DD/YYYY','M/D/YYYY','MM/DD/YY','M/D/YY',
-      'DD/MM/YYYY','D/M/YYYY','DD/MM/YY','D/M/YY',
-      'DD-MMM-YYYY','D-MMM-YYYY','MMM DD, YYYY',
-      'YYYY-MM-DD HH:mm','YYYY-MM-DD HH:mm:ss',
-      'YYYY/MM/DD HH:mm','YYYY/MM/DD HH:mm:ss',
-      'MM/DD/YYYY HH:mm','MM/DD/YYYY HH:mm:ss',
-      'DD/MM/YYYY HH:mm','DD/MM/YYYY HH:mm:ss'
-    ];
+  <!-- Combo Builder -->
+  <div class="card hidden" id="comboCard">
+    <h3>Combo Builder</h3>
+    <div class="row">
+      <label class="btn secondary"><input id="comboEnable" type="checkbox" style="accent-color:#5ac8fa"> Enable combo</label>
+      <button class="btn secondary" id="comboEqualBtn">Equal weights</button>
+      <button class="btn secondary" id="comboApplyBtn">Update weights</button>
+      <div class="spacer"></div>
+      <span class="badge" id="comboTotal">Total: 100% — perfect</span>
+    </div>
+    <div id="comboWeights" class="weights"></div>
+    <div class="footnote">Type numbers, then click <b>Update weights</b>. Weights are normalized to 100% (if all zeros, equal weights are used). The Total badge updates live and hints how much to add/remove.</div>
+  </div>
 
-    // State
-    let rawSeries = {}; let merged = []; let retSimple={}, retLog={}, equity={}, drawdowns={};
-    let freq=null; let labels=[];
-    const LSK = { transpose:'pa_stats_transposed', comboEnabled:'pa_combo_enabled', comboWeights:'pa_combo_weights' };
-    let statsTransposed = localStorage.getItem(LSK.transpose) === '1';
-    let comboEnabled = localStorage.getItem(LSK.comboEnabled) === '1';
-    let comboWeights = {}; try{ comboWeights = JSON.parse(localStorage.getItem(LSK.comboWeights)||'{}')||{}; }catch{ comboWeights={} }
+  <!-- Toggles -->
+  <div class="row" style="margin:12px 0">
+    <div class="toggle" id="retMode">
+      <button data-mode="simple" class="active">Cumulative — Simple</button>
+      <button data-mode="log">Cumulative — Log</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="toggle" id="quickRanges">
+      <button data-range="10Y">10Y</button>
+      <button data-range="5Y">5Y</button>
+      <button data-range="1Y">1Y</button>
+      <button data-range="YTD">YTD</button>
+      <button data-range="All" class="active">All</button>
+    </div>
+  </div>
 
-    const $ = (id)=>document.getElementById(id.replace('#',''));
-    const els = {
-      fileInput:$('#fileInput'), fileList:$('#fileList'),
-      startDate:$('#startDate'), endDate:$('#endDate'), fullRangeBtn:$('#fullRangeBtn'), rangeNote:$('#rangeNote'), downloadMerged:$('#downloadMerged'),
-      cumChart:$('#cumChart'), ddChart:$('#ddChart'),
-      statsTable:$('#statsTable'), corrTable:$('#corrTable'), corrNegTable:$('#corrNegTable'),
-      statsCsvBtn:$('#statsCsvBtn'), statsXlsBtn:$('#statsXlsBtn'), corrCsvBtn:$('#corrCsvBtn'), corrXlsBtn:$('#corrXlsBtn'),
-      corrNegCsvBtn:$('#corrNegCsvBtn'), corrNegXlsBtn:$('#corrNegXlsBtn'),
-      freqBadge:$('#freqBadge'), retMode:$('#retMode'), quickRanges:$('#quickRanges'),
-      comboCard:$('#comboCard'), comboEnable:$('#comboEnable'), comboWeights:$('#comboWeights'), comboEqualBtn:$('#comboEqualBtn'), comboApplyBtn:$('#comboApplyBtn'), comboTotal:$('#comboTotal'),
+  <!-- Charts -->
+  <div class="grid cols-1">
+    <div class="card"><h3>Cumulative Returns</h3><div id="cumChart" class="chart wide"></div></div>
+    <div class="card"><h3>Drawdowns</h3><div id="ddChart" class="chart wide"></div></div>
+  </div>
+
+  <!-- Tables -->
+  <div class="grid cols-2" style="margin-top:16px">
+    <div class="card">
+      <h3>Financial Stats</h3>
+      <div class="toolbar">
+        <button class="btn secondary" id="statsSwitchAxesBtn">Switch axes</button>
+        <button class="btn secondary" id="statsCsvBtn">CSV</button>
+        <button class="btn secondary" id="statsXlsBtn">XLS</button>
+      </div>
+      <div class="table-wrap"><table id="statsTable"></table></div>
+      <div class="footnote">Assumes risk-free rate = 0. Annualization uses detected frequency (252 for daily, 12 for monthly).</div>
+    </div>
+
+    <div class="card">
+      <h3>Correlation Matrix (returns)</h3>
+      <div class="toolbar">
+        <button class="btn secondary" id="corrCsvBtn">CSV</button>
+        <button class="btn secondary" id="corrXlsBtn">XLS</button>
+      </div>
+      <div class="table-wrap"><table id="corrTable"></table></div>
+      <div class="footnote">Cells: ≤0.6 green, 0.6–0.8 yellow, &gt;0.8 red. 1.0 unshaded.</div>
+    </div>
+
+    <div class="card">
+      <h3>Correlation Matrix (negative returns)</h3>
+      <div class="toolbar">
+        <button class="btn secondary" id="corrNegCsvBtn">CSV</button>
+        <button class="btn secondary" id="corrNegXlsBtn">XLS</button>
+      </div>
+      <div class="table-wrap"><table id="corrNegTable"></table></div>
+      <div class="footnote">Pairs where <b>both</b> tickers’ returns are negative are included.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+dayjs.extend(window.dayjs_plugin_customParseFormat);
+dayjs.extend(window.dayjs_plugin_advancedFormat);
+dayjs.extend(window.dayjs_plugin_minMax);
+
+/* --------- helpers / state --------- */
+const DATE_FORMATS = [
+  'YYYY-MM-DD','YYYY/MM/DD','YYYY.MM.DD',
+  'MM/DD/YYYY','M/D/YYYY','MM/DD/YY','M/D/YY',
+  'DD/MM/YYYY','D/M/YYYY','DD/MM/YY','D/M/YY',
+  'DD-MMM-YYYY','D-MMM-YYYY','MMM DD, YYYY',
+  'YYYY-MM-DD HH:mm','YYYY-MM-DD HH:mm:ss',
+  'YYYY/MM/DD HH:mm','YYYY/MM/DD HH:mm:ss',
+  'MM/DD/YYYY HH:mm','MM/DD/YYYY HH:mm:ss',
+  'DD/MM/YYYY HH:mm','DD/MM/YYYY HH:mm:ss'
+];
+let rawSeries={}, merged=[], retSimple={}, retLog={}, equity={}, drawdowns={}, freq=null, labels=[];
+const LSK={transpose:'pa_stats_transposed', comboEnabled:'pa_combo_enabled', comboWeights:'pa_combo_weights'};
+let statsTransposed=localStorage.getItem(LSK.transpose)==='1';
+let comboEnabled=localStorage.getItem(LSK.comboEnabled)==='1';
+let comboWeights={}; try{comboWeights=JSON.parse(localStorage.getItem(LSK.comboWeights)||'{}')||{}}catch{}
+const $=id=>document.getElementById(id);
+
+function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z]/g,''); }
+
+const els={
+  fileInput:$('#fileInput'),
+  startDate:$('#startDate'), endDate:$('#endDate'),
+  fullRangeBtn:$('#fullRangeBtn'), rangeNote:$('#rangeNote'),
+  downloadMerged:$('#downloadMerged'),
+  cumChart:$('#cumChart'), ddChart:$('#ddChart'),
+  statsTable:$('#statsTable'), corrTable:$('#corrTable'), corrNegTable:$('#corrNegTable'),
+  statsCsvBtn:$('#statsCsvBtn'), statsXlsBtn:$('#statsXlsBtn'),
+  corrCsvBtn:$('#corrCsvBtn'), corrXlsBtn:$('#corrXlsBtn'),
+  corrNegCsvBtn:$('#corrNegCsvBtn'), corrNegXlsBtn:$('#corrNegXlsBtn'),
+  freqBadge:$('#freqBadge'), retMode:$('#retMode'), quickRanges:$('#quickRanges'),
+};
+
+function addPickerBtn(input){
+  if(!input) return; let wrap=input.parentElement; if(!wrap) return;
+  if(!wrap.classList.contains('date-wrap')){
+    const span=document.createElement('span'); span.className='date-wrap';
+    wrap.replaceChild(span,input); span.appendChild(input); wrap=span;
+  }
+  if(wrap.querySelector('.picker-btn')) return;
+  const btn=document.createElement('button'); btn.type='button'; btn.className='picker-btn';
+  btn.setAttribute('aria-label','Open calendar');
+  btn.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+  btn.onclick=()=>{ if(typeof input.showPicker==='function'){ try{ input.showPicker(); return; }catch{} } input.focus(); try{ const t=input.type; input.type='text'; input.type=t; }catch{} };
+  wrap.appendChild(btn);
+}
+
+function toCsv(rows){ if(!rows.length) return ''; const h=Object.keys(rows[0]); const lines=[h.join(',')]; for(const r of rows) lines.push(h.map(k=>r[k]??'').join(',')); return lines.join('\n'); }
+function downloadFile(name,content,mime='text/csv;charset=utf-8',addBOM=false){
+  let blob; if(content instanceof Blob) blob=content; else{const prefix=(addBOM && /^text\/csv/i.test(mime))?'\uFEFF':''; blob=new Blob([prefix+content],{type:mime});}
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); requestAnimationFrame(()=>{document.body.removeChild(a); URL.revokeObjectURL(a.href);});
+}
+const median=a=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+function detectFrequency(d){ if(d.length<2) return 'daily'; const dif=[]; for(let i=1;i<d.length;i++) dif.push((d[i]-d[i-1])/86400000); return median(dif)<=10?'daily':'monthly'; }
+function parseDateTimeKey(v){
+  if(v==null) return null;
+  const t=(v instanceof Date)?v.toISOString():String(v).trim(); if(!t) return null;
+  let d=null; for(const f of DATE_FORMATS){const dd=dayjs(t,f,true); if(dd.isValid()){d=dd.toDate(); break;}}
+  if(!d){const di=dayjs(t); if(di.isValid()) d=di.toDate();}
+  if(!d){const dn=new Date(t); if(!isNaN(dn.getTime())) d=dn;}
+  if(!d) return null; const dayKey=d.toISOString().slice(0,10); return {ts:d.getTime(), dayKey};
+}
+function dateFromDayKey(k){ const [y,m,d]=k.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)); }
+function intersectDates(map){ const arrs=Object.values(map); if(!arrs.length) return []; const sets=arrs.map(a=>new Set(a.map(d=>d.date.getTime()))); let common=sets[0]; for(let i=1;i<sets.length;i++){const nxt=new Set(); for(const t of common) if(sets[i].has(t)) nxt.add(t); common=nxt;} return Array.from(common).sort((a,b)=>a-b).map(t=>new Date(t)); }
+function updateDownloadState(){ const enabled=labels.length>0 && merged.length>0 && withinRange().length>0; const btn=document.getElementById('downloadMerged'); if(btn) btn.disabled=!enabled; }
+function clearVisuals(){ try{Plotly.purge('cumChart');}catch{} try{Plotly.purge('ddChart');}catch{} const s=document.getElementById('statsTable'); if(s) s.innerHTML=''; const c=document.getElementById('corrTable'); if(c) c.innerHTML=''; const cn=document.getElementById('corrNegTable'); if(cn) cn.innerHTML=''; const rn=document.getElementById('rangeNote'); if(rn) rn.textContent=''; try{Plotly.purge('timelineChart');}catch{} const card=document.getElementById('coverageCard'); if(card) card.classList.add('hidden'); }
+
+/* combo helpers */
+function saveComboState(){ localStorage.setItem(LSK.comboEnabled, comboEnabled?'1':'0'); localStorage.setItem(LSK.comboWeights, JSON.stringify(comboWeights||{})); }
+function activeLabels(){ return comboEnabled ? [...labels,'combo'] : labels; }
+function fmtPct(x){ return isFinite(x)? (x*100).toFixed(2)+'%' : '—'; }
+function fmt(x){ return isFinite(x)? x.toFixed(3) : '—'; }
+
+/* computations */
+function computeReturns(){
+  const common=intersectDates(rawSeries);
+  merged=[]; for(const dt of common){ const row={Date:dt.toISOString().slice(0,10)}; for(const lab of labels){ const v=rawSeries[lab].find(x=>x.date.getTime()===dt.getTime()); row[lab]=v?v.close:undefined; } merged.push(row); }
+
+  if(merged.length){
+    const dates=merged.map(r=>new Date(r.Date)); freq=detectFrequency(dates); const fb=document.getElementById('freqBadge'); if(fb) fb.textContent=`Frequency: ${freq}`;
+    const min=merged[0].Date, max=merged[merged.length-1].Date;
+    const sd=document.getElementById('startDate'), ed=document.getElementById('endDate');
+    if(sd){ sd.min=min; sd.max=max; sd.value=min; }
+    if(ed){ ed.min=max>=min?max:min; ed.max=max; ed.value=max; }
+    const rn=document.getElementById('rangeNote'); if(rn) rn.textContent=`${min} → ${max} (${merged.length} points)`;
+  }else{
+    freq=null; const fb=document.getElementById('freqBadge'); if(fb) fb.textContent='–';
+    const sd=document.getElementById('startDate'), ed=document.getElementById('endDate');
+    if(sd){ sd.value=''; sd.removeAttribute('min'); sd.removeAttribute('max'); }
+    if(ed){ ed.value=''; ed.removeAttribute('min'); ed.removeAttribute('max'); }
+    clearVisuals();
+  }
+
+  retSimple={}; retLog={}; equity={}; drawdowns={};
+  for(const lab of labels){
+    const p=merged.map(r=>Number(r[lab])); const rS=[], rL=[], eq=[1];
+    for(let i=1;i<p.length;i++){ const rs=p[i]/p[i-1]-1; rS.push(rs); rL.push(Math.log(p[i]/p[i-1])); eq.push(eq[eq.length-1]*(1+rs)); }
+    retSimple[lab]=rS; retLog[lab]=rL; equity[lab]=eq;
+    const dd=[]; let peak=eq[0]; for(const w of eq){ peak=Math.max(peak,w); dd.push(w/peak-1); } drawdowns[lab]=dd;
+  }
+  updateDownloadState();
+}
+
+/* coverage timeline (tighter spacing) */
+function renderTimeline(){
+  const card=document.getElementById('coverageCard');
+  const target=document.getElementById('timelineChart');
+  if(!card || !target){ console.warn('Timeline panel missing; skipping'); return; }
+
+  const items=[];
+  for(const lab of labels){ const rows=rawSeries[lab]||[]; if(!rows.length) continue; items.push({lab,start:rows[0].date,end:rows[rows.length-1].date}); }
+  if(!items.length){ try{Plotly.purge(target);}catch{}; card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  items.sort((a,b)=>a.lab.localeCompare(b.lab));
+  const traces=items.map(it=>({
+    type:'scatter',mode:'lines',showlegend:false,
+    x:[it.start.toISOString().slice(0,10),it.end.toISOString().slice(0,10)],
+    y:[it.lab,it.lab],
+    line:{width:3},                               /* thinner lines */
+    hovertemplate:`${it.lab}<br>${it.start.toISOString().slice(0,10)} → ${it.end.toISOString().slice(0,10)}<extra></extra>`
+  }));
+  const minStart=items.reduce((m,i)=>i.start<m?i.start:m,items[0].start),
+        maxEnd  =items.reduce((m,i)=>i.end>m?i.end:m,items[0].end);
+
+  try{
+    Plotly.newPlot(target,traces,{
+      paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+      xaxis:{type:'date',gridcolor:'#1e2a36',tickformat:'%Y',dtick:'M12',
+             tickfont:{size: 10, color: '#c9d3dd'}, fixedrange:true,
+             range:[dayjs(minStart).subtract(30,'day').format('YYYY-MM-DD'),
+                    dayjs(maxEnd).add(30,'day').format('YYYY-MM-DD')]},
+      yaxis:{type:'category',categoryorder:'array',
+             categoryarray:items.map(i=>i.lab),
+             gridcolor:'#1e2a36',
+             tickfont:{size: 11, color: '#e5edf5'}, fixedrange:true,
+             automargin:true},
+      margin:{l:76,r:8,t:4,b:18},                 /* tighter margins */
+      hovermode:'x'
+    }, {responsive:true,displaylogo:false});
+  }catch(e){ console.warn('Timeline render failed but continuing:', e); }
+}
+
+/* combo */
+function ensureComboWeights(){ const L=labels.slice(); if(!L.length){comboWeights={}; return;} for(const lab of L){ if(typeof comboWeights[lab]!=='number'||isNaN(comboWeights[lab])) comboWeights[lab]=100/L.length; } for(const k of Object.keys(comboWeights)) if(!L.includes(k)) delete comboWeights[k]; updateComboUIValues(); saveComboState(); }
+function rebalanceCombo(){ const L=labels.slice(); if(!L.length) return; for(const lab of L){ let v=Number(comboWeights[lab]); if(!isFinite(v)) v=0; comboWeights[lab]=Math.min(100,Math.max(0,v)); } let sum=L.reduce((a,l)=>a+(comboWeights[l]||0),0); if(sum<=0){const eq=100/L.length; for(const lab of L) comboWeights[lab]=eq;} else {const k=100/sum; for(const lab of L) comboWeights[lab]=(comboWeights[lab]||0)*k;} updateComboUIValues();}
+function updateComboUIValues(){ const L=labels.slice(); if(!L.length){ const badge=document.getElementById('comboTotal'); if(badge){ badge.textContent='Total: 0.00% — add 100.00%'; badge.classList.add('warn'); badge.classList.remove('ok'); } return;} let total=0; for(const lab of L){ const input=document.querySelector(`input[data-lab="${lab}"]`); if(input) input.value=(comboWeights[lab]||0).toFixed(2); total+=comboWeights[lab]||0; } setComboTotalBadge(total); }
+function sanitizeNumber(s){ if(typeof s!=='string') s=String(s??''); s=s.replace(/[^0-9+\-\.eE]/g,''); const v=parseFloat(s); return Number.isFinite(v)?v:0; }
+function readWeightsFromInputs(){ const L=labels.slice(); let sum=0,map={}; for(const lab of L){ const input=document.querySelector(`input[data-lab="${lab}"]`); const v=sanitizeNumber(input?input.value:'0'); map[lab]=v; sum+=v; } return {sum,map}; }
+function neededToHundred(sum){ const d=100-sum; if(Math.abs(d)<0.005) return 'perfect'; return d>0?`add ${d.toFixed(2)}%`:`remove ${Math.abs(d).toFixed(2)}%`; }
+function setComboTotalBadge(sum){ const badge=document.getElementById('comboTotal'); if(!badge) return; const hint=neededToHundred(sum); badge.textContent=`Total: ${sum.toFixed(2)}%${hint==='perfect'?' — perfect':' — '+hint}`; badge.classList.toggle('ok',hint==='perfect'); badge.classList.toggle('warn',hint!=='perfect'); }
+function updateComboTotalLive(){ const {sum}=readWeightsFromInputs(); setComboTotalBadge(sum); }
+function renderComboUI(){
+  const card=document.getElementById('comboCard'); const wrap=document.getElementById('comboWeights');
+  if(!labels.length){ if(card) card.classList.add('hidden'); return; }
+  if(card) card.classList.remove('hidden');
+  if(wrap) wrap.innerHTML=''; const frag=document.createDocumentFragment();
+  for(const lab of labels){ const it=document.createElement('div'); it.className='weight-item'; const lb=document.createElement('label'); lb.textContent=lab; const input=document.createElement('input'); input.type='text'; input.inputMode='decimal'; input.placeholder='0.00'; input.dataset.lab=lab; input.addEventListener('keydown',e=>{if(e.key==='Enter'){ const btn=document.getElementById('comboApplyBtn'); if(btn) btn.click(); }}); input.addEventListener('input',updateComboTotalLive); it.appendChild(lb); it.appendChild(input); frag.appendChild(it); }
+  if(wrap) wrap.appendChild(frag);
+  const enable=document.getElementById('comboEnable'); if(enable) enable.checked = comboEnabled && labels.length>0;
+  if(enable) enable.onchange=()=>{ comboEnabled=!!enable.checked; saveComboState(); recomputeCombo(); updateAll(); };
+  const eqBtn=document.getElementById('comboEqualBtn'); if(eqBtn) eqBtn.onclick=()=>{ const eq=100/labels.length; for(const lab of labels) comboWeights[lab]=eq; updateComboUIValues(); updateComboTotalLive(); saveComboState(); recomputeCombo(); updateAll(); };
+  const applyBtn=document.getElementById('comboApplyBtn'); if(applyBtn) applyBtn.onclick=()=>{ const {map}=readWeightsFromInputs(); for(const lab of labels) comboWeights[lab]=map[lab]||0; rebalanceCombo(); saveComboState(); recomputeCombo(); updateAll(); };
+  updateComboUIValues(); updateComboTotalLive();
+}
+function recomputeCombo(){ ensureComboWeights(); injectComboIntoMerged(); }
+function computeComboSeries(){ const L=labels.slice(); if(!L.length||!merged.length) return null; const total=L.reduce((a,l)=>a+(comboWeights[l]||0),0)||1; const w=Object.fromEntries(L.map(l=>[l,(comboWeights[l]||0)/total])); const eq=[1], rS=[], rL=[]; for(let i=1;i<merged.length;i++){ let r=0; for(const lab of L){ const prev=merged[i-1][lab], cur=merged[i][lab]; r += w[lab]*(cur/prev-1); } rS.push(r); rL.push(Math.log(1+r)); eq.push(eq[eq.length-1]*(1+r)); } const dd=[]; let peak=eq[0]; for(const v of eq){ peak=Math.max(peak,v); dd.push(v/peak-1);} return {eq,rS,rL,dd}; }
+function injectComboIntoMerged(){ if(!comboEnabled||!labels.length||!merged.length){ for(const row of merged) delete row['combo']; delete retSimple['combo']; delete retLog['combo']; delete equity['combo']; delete drawdowns['combo']; return; } const c=computeComboSeries(); if(!c) return; for(let i=0;i<merged.length;i++) merged[i]['combo']=c.eq[i]; retSimple['combo']=c.rS; retLog['combo']=c.rL; equity['combo']=c.eq; drawdowns['combo']=c.dd; }
+
+/* ranges + stats */
+function withinRange(){ if(!merged.length) return []; const sd=document.getElementById('startDate'), ed=document.getElementById('endDate'); const s=sd&&sd.value?new Date(sd.value):new Date(merged[0].Date); const e=ed&&ed.value?new Date(ed.value):new Date(merged[merged.length-1].Date); return merged.filter(r=>{const d=new Date(r.Date); return d>=s&&d<=e;}); }
+const annualizationFactor=()=>freq==='daily'?252:12;
+function computeStats(){
+  if(!merged.length) return []; const data=withinRange(); const af=annualizationFactor(); const years=data.length/af; const rows=[];
+  for(const lab of activeLabels()){
+    const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v)); if(prices.length<2) continue;
+    const total=prices.at(-1)/prices[0]; const CAGR=Math.pow(total,1/Math.max(years,1e-9))-1;
+    const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
+    const mean=rs.reduce((a,b)=>a+b,0)/rs.length;
+    const sd=Math.sqrt(rs.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(rs.length-1||1));
+    const neg=rs.filter(x=>x<0); const sdNeg=neg.length?Math.sqrt(neg.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(neg.length-1||1)):0;
+    const vol=sd*Math.sqrt(af); const sharpe=sd?(mean/sd)*Math.sqrt(af):NaN; const sortino=sdNeg?(mean/sdNeg)*Math.sqrt(af):NaN;
+    let eq=[1],peak=1,maxDD=0,ddP=[]; for(const r of rs){ const w=eq.at(-1)*(1+r); eq.push(w); peak=Math.max(peak,w); const dd=w/peak-1; maxDD=Math.min(maxDD,dd); ddP.push(dd*100); }
+    const ulcer=ddP.length?Math.sqrt(ddP.reduce((a,b)=>a+b*b,0)/ddP.length):0; const UPI=ulcer?(CAGR*100)/ulcer:NaN;
+    const gain=rs.filter(x=>x>0).reduce((a,b)=>a+b,0); const loss=Math.abs(rs.filter(x=>x<0).reduce((a,b)=>a+b,0)||NaN); const pf=gain/loss;
+    const calmar=Math.abs(maxDD)>0?CAGR/Math.abs(maxDD):NaN;
+    rows.push({Metric:lab,CAGR,MaxDrawdown:maxDD,Sharpe:sharpe,Sortino:sortino,UPI:ulcer?UPI:NaN,Volatility:vol,ProfitFactor:pf,Calmar:calmar});
+  }
+  return rows;
+}
+function corrMatrix(negOnly=false){
+  const data=withinRange(); const R={};
+  for(const lab of activeLabels()){
+    const p=data.map(r=>Number(r[lab])); if(p.length<2) continue; const rs=[]; for(let i=1;i<p.length;i++) rs.push(p[i]/p[i-1]-1); R[lab]=rs;
+  }
+  const L=Object.keys(R); if(!L.length) return {labels:[],matrix:[]}; const n=L.length; const M=Array.from({length:n},()=>Array(n).fill(1));
+  function corr(a,b){ const n=Math.min(a.length,b.length); if(n<2) return NaN; let num=0,da=0,db=0,k=0,sumA=0,sumB=0; for(let i=0;i<n;i++){ if(negOnly && !(a[i]<0 && b[i]<0)) continue; sumA+=a[i]; sumB+=b[i]; k++; } if(k<2) return NaN; const ma=sumA/k, mb=sumB/k; for(let i=0;i<n;i++){ if(negOnly && !(a[i]<0 && b[i]<0)) continue; const xa=a[i]-ma, xb=b[i]-mb; num+=xa*xb; da+=xa*xa; db+=xb*xb; } return (da===0||db===0)?NaN:num/Math.sqrt(da*db); }
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) M[i][j]=(i===j)?1:corr(R[L[i]],R[L[j]]);
+  return {labels:L,matrix:M};
+}
+
+/* charts */
+function cumulativeSeries(mode,prices){
+  const r=[]; for(let i=1;i<prices.length;i++) r.push(prices[i]/prices[i-1]-1);
+  if(mode==='log'){ const c=[0]; let acc=0; for(const ri of r){acc+=Math.log(1+ri); c.push(acc);} return {y:c,yHoverPct:c.map(x=>Math.exp(x)-1)}; }
+  let eq=[1]; for(const rr of r) eq.push(eq.at(-1)*(1+rr)); return {y:eq.map(x=>x-1)};
+}
+function drawCharts(){
+  const cumEl=document.getElementById('cumChart');
+  const ddEl=document.getElementById('ddChart');
+  if(!cumEl||!ddEl){ console.warn('Chart containers missing; skipping'); return; }
+
+  injectComboIntoMerged();
+
+  const data=withinRange();
+  if(!data.length){ try{Plotly.purge(cumEl);}catch{} try{Plotly.purge(ddEl);}catch{} return; }
+
+  const dates=data.map(r=>r.Date);
+  const modeBtn=(document.getElementById('retMode')||document.createElement('div')).querySelector('button.active');
+  const mode=(modeBtn && modeBtn.dataset.mode==='log')?'log':'simple';
+
+  try{
+    const tracesCum=[];
+    for(const lab of activeLabels()){
+      const p=data.map(r=>Number(r[lab])); const cum=cumulativeSeries(mode,p);
+      const t={type:'scatter',mode:'lines',name:lab,x:dates,y:cum.y};
+      t.hovertemplate=(mode==='log')?`%{x}<br>${lab}: ln=%{y:.3f} (⇔ %{customdata:.2%})<extra></extra>`:`%{x}<br>${lab}: %{y:.2%}<extra></extra>`;
+      if(mode==='log'){ t.customdata=cum.yHoverPct; }
+      tracesCum.push(t);
+    }
+    Plotly.newPlot(cumEl,tracesCum,{
+      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      xaxis:{gridcolor:'#1e2a36',showspikes:false},
+      yaxis: mode==='log' ? {title:'Cumulative log return (ln Wealth)',tickformat:'.3f',gridcolor:'#1e2a36'}
+                          : {title:'Cumulative return',tickformat:'.0%',gridcolor:'#1e2a36'},
+      margin:{l:70,r:20,t:10,b:40},
+      legend:{orientation:'h',bgcolor:'rgba(0,0,0,0)',font:{color:'#d0d9e2'}},
+      hovermode:'x unified', hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
+    },{responsive:true,displaylogo:false,modeBarButtonsToAdd:['select2d','lasso2d']});
+  }catch(e){ console.warn('drawCharts cumulative failed:',e); }
+
+  try{
+    const tracesDD=[];
+    for(const lab of activeLabels()){
+      const p=data.map(r=>Number(r[lab])); let eq=[1],peak=1; const dd=[0];
+      for(let i=1;i<p.length;i++){ const rr=p[i]/p[i-1]-1; const w=eq.at(-1)*(1+rr); eq.push(w); peak=Math.max(peak,w); dd.push(w/peak-1); }
+      tracesDD.push({type:'scatter',mode:'lines',name:lab,x:dates,y:dd,hovertemplate:`%{x}<br>${lab}: %{y:.2%}<extra></extra>`});
+    }
+    Plotly.newPlot(ddEl,tracesDD,{
+      paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+      xaxis:{gridcolor:'#1e2a36',showspikes:false},
+      yaxis:{tickformat:'.0%',gridcolor:'#1e2a36'},
+      margin:{l:60,r:20,t:10,b:40},
+      legend:{orientation:'h',bgcolor:'rgba(0,0,0,0)',font:{color:'#d0d9e2'}},
+      hovermode:'x unified', hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
+    },{responsive:true,displaylogo:false});
+
+    const H='rgba(208,217,226,0.5)';
+    function line(t){ try{Plotly.relayout(t,{shapes:[{type:'line',xref:'x',yref:'paper',x0:0,x1:0,y0:0,y1:1,layer:'above',visible:false,line:{color:H,width:1}}]});}catch{} }
+    function setX(t,x,vis){ if(!t) return; const patch=vis?{'shapes[0].x0':x,'shapes[0].x1':x,'shapes[0].visible':true}:{'shapes[0].visible':false}; try{Plotly.relayout(t,patch);}catch{} }
+    function wire(a,b){ if(!a||a._wired) return; a._wired=true; a.on('plotly_hover',ev=>{const x=ev.points?.[0]?.x; if(x!=null){setX(a,x,true); setX(b,x,true);}}); a.on('plotly_unhover',()=>{setX(a,null,false); setX(b,null,false);}); }
+    line(cumEl); line(ddEl); wire(cumEl,ddEl); wire(ddEl,cumEl);
+  }catch(e){ console.warn('drawCharts drawdown failed:',e); }
+}
+
+/* quick ranges */
+function applyQuickRange(tag){
+  if(!merged.length) return; const allStart=merged[0].Date, allEnd=merged[merged.length-1].Date; const end=dayjs(allEnd); let start=dayjs(allStart), yearStart=dayjs(allEnd).startOf('year');
+  if(tag==='10Y') start=end.subtract(10,'year'); if(tag==='5Y') start=end.subtract(5,'year'); if(tag==='1Y') start=end.subtract(1,'year'); if(tag==='YTD') start=yearStart; if(tag==='All') start=dayjs(allStart);
+  const clamp=dayjs.max(start,dayjs(allStart)).format('YYYY-MM-DD'); const sd=document.getElementById('startDate'), ed=document.getElementById('endDate'); if(sd) sd.value=clamp; if(ed) ed.value=end.format('YYYY-MM-DD'); updateAll();
+}
+
+/* stats table render + transpose */
+function renderStatsTable(){
+  const table = document.getElementById('statsTable');
+  if (!table) { console.warn('statsTable missing; skipping render'); return; }
+
+  const rows = computeStats();
+  if (!rows.length) { table.innerHTML = ''; table._export = []; table._exportCsv = []; return; }
+
+  const metrics = ['CAGR','MaxDrawdown','Sharpe','Sortino','UPI','Volatility','ProfitFactor','Calmar'];
+  const friendly = {
+    CAGR:'CAGR','MaxDrawdown':'Max drawdown','Sharpe':'Sharpe','Sortino':'Sortino',
+    UPI:'Ulcer Perf. Index','Volatility':'Volatility','ProfitFactor':'Profit factor','Calmar':'Calmar'
+  };
+
+  if (!statsTransposed) {
+    const headers = ['Metric', friendly.CAGR, friendly.MaxDrawdown, friendly.Sharpe, friendly.Sortino,
+                     friendly.UPI, friendly.Volatility, friendly.ProfitFactor, friendly.Calmar];
+    let html = '<thead><tr>' + headers.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+    for (const r of rows) {
+      html += '<tr>'
+        + `<td>${r.Metric}</td>`
+        + `<td>${fmtPct(r.CAGR)}</td>`
+        + `<td>${fmtPct(r.MaxDrawdown)}</td>`
+        + `<td>${fmt(r.Sharpe)}</td>`
+        + `<td>${fmt(r.Sortino)}</td>`
+        + `<td>${fmt(r.UPI)}</td>`
+        + `<td>${fmtPct(r.Volatility/100)}</td>`
+        + `<td>${fmt(r.ProfitFactor)}</td>`
+        + `<td>${fmt(r.Calmar)}</td>`
+        + '</tr>';
+    }
+    html += '</tbody>';
+    table.innerHTML = html;
+
+    const raw = rows.map(r=>({
+      Ticker:r.Metric, CAGR:r.CAGR*100, MaxDrawdown:r.MaxDrawdown*100, Sharpe:r.Sharpe,
+      Sortino:r.Sortino, UPI:r.UPI, Volatility:r.Volatility*100, ProfitFactor:r.ProfitFactor, Calmar:r.Calmar
+    }));
+    const pretty = raw.map(r=>({
+      Ticker:r.Ticker,
+      CAGR: isFinite(r.CAGR)? r.CAGR.toFixed(3):'',
+      MaxDrawdown: isFinite(r.MaxDrawdown)? r.MaxDrawdown.toFixed(3):'',
+      Sharpe: isFinite(r.Sharpe)? r.Sharpe.toFixed(4):'',
+      Sortino: isFinite(r.Sortino)? r.Sortino.toFixed(4):'',
+      UPI: isFinite(r.UPI)? r.UPI.toFixed(4):'',
+      Volatility: isFinite(r.Volatility)? r.Volatility.toFixed(3):'',
+      ProfitFactor: isFinite(r.ProfitFactor)? r.ProfitFactor.toFixed(4):'',
+      Calmar: isFinite(r.Calmar)? r.Calmar.toFixed(4):'',
+    }));
+    table._export = raw;
+    table._exportCsv = pretty;
+    return;
+  }
+
+  const headers = ['Metric', ...activeLabels()];
+  let html = '<thead><tr>' + headers.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+  const by = Object.fromEntries(rows.map(r=>[r.Metric, r]));
+  const rawOut=[], prettyOut=[];
+  for (const m of metrics) {
+    const disp = friendly[m];
+    let tr = `<tr><td>${disp}</td>`;
+    const rawRow = { Metric: disp }, prettyRow = { Metric: disp };
+    for (const lab of activeLabels()) {
+      const r = by[lab]; const val = r ? r[m] : NaN;
+      let cell;
+      if (m==='CAGR'||m==='MaxDrawdown') cell = fmtPct(val);
+      else if (m==='Volatility') cell = fmtPct(val/100);
+      else cell = fmt(val);
+      tr += `<td>${cell}</td>`;
+
+      const rawVal = (m==='CAGR'||m==='MaxDrawdown'||m==='Volatility')
+        ? (isFinite(val)? val*100 : null)
+        : (isFinite(val)? val : null);
+      rawRow[lab] = rawVal;
+      prettyRow[lab] = isFinite(rawVal)
+        ? ((m==='CAGR'||m==='MaxDrawdown'||m==='Volatility') ? rawVal.toFixed(3) : rawVal.toFixed(4))
+        : '';
+    }
+    tr += '</tr>';
+    html += tr;
+    rawOut.push(rawRow); prettyOut.push(prettyRow);
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
+  table._export = rawOut;
+  table._exportCsv = prettyOut;
+}
+
+/* safe wiring after load */
+document.addEventListener('DOMContentLoaded', ()=>{
+  addPickerBtn(document.getElementById('startDate'));
+  addPickerBtn(document.getElementById('endDate'));
+
+  const switchBtn=document.getElementById('statsSwitchAxesBtn');
+  if(switchBtn){
+    switchBtn.textContent = statsTransposed ? 'Switch axes (back)' : 'Switch axes';
+    switchBtn.onclick = () => {
+      statsTransposed = !statsTransposed;
+      localStorage.setItem(LSK.transpose, statsTransposed ? '1':'0');
+      switchBtn.textContent = statsTransposed ? 'Switch axes (back)' : 'Switch axes';
+      renderStatsTable();
     };
+  }
 
-    // Visible date buttons
-    (function addPickerButtons(){
-      for(const id of ['startDate','endDate']){
-        const inp = els[id];
-        const wrap = inp.parentElement;
-        const btn = document.createElement('button');
-        btn.type='button'; btn.className='picker-btn'; btn.setAttribute('aria-label','Open calendar');
-        btn.innerHTML='<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
-        btn.addEventListener('click',()=>{ if(typeof inp.showPicker==='function'){ try{inp.showPicker();return;}catch{} } inp.focus(); });
-        wrap.appendChild(btn);
+  const fr=document.getElementById('fullRangeBtn');
+  if(fr) fr.onclick=()=>{ if(!merged.length) return; const sd=document.getElementById('startDate'), ed=document.getElementById('endDate'); if(sd) sd.value=merged[0].Date; if(ed) ed.value=merged[merged.length-1].Date; const qr=document.getElementById('quickRanges'); if(qr){ qr.querySelectorAll('button').forEach(b=>b.classList.remove('active')); const allBtn=qr.querySelector('[data-range="All"]'); if(allBtn) allBtn.classList.add('active'); } updateAll(); };
+
+  const sd=document.getElementById('startDate'), ed=document.getElementById('endDate');
+  if(sd) sd.onchange=updateAll; if(ed) ed.onchange=updateAll;
+
+  const dl=document.getElementById('downloadMerged');
+  if(dl) dl.onclick=()=>{ if(dl.disabled) return; const rows=withinRange(); downloadFile('merged.csv', toCsv(rows), 'text/csv;charset=utf-8', true); };
+
+  const rm=document.getElementById('retMode');
+  if(rm) rm.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; rm.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); drawCharts();});
+  const qr=document.getElementById('quickRanges');
+  if(qr) qr.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; qr.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); applyQuickRange(b.dataset.range);});
+
+  /* robust file input wiring: only 'change' + in-flight guard to prevent duplicates */
+  const inp=document.getElementById('fileInput');
+  let uploadBusy=false;
+  function run(fileList){
+    if(uploadBusy) return;
+    if(fileList && fileList.length){
+      uploadBusy=true;
+      handleUpload(fileList)
+        .catch(err=>console.error('Upload failed:',err))
+        .finally(()=>{ uploadBusy=false; });
+    }
+  }
+  if(inp){ inp.addEventListener('change', e=>run(e.target.files)); }
+
+  // Stats export
+  const sCsv=document.getElementById('statsCsvBtn'), sXls=document.getElementById('statsXlsBtn');
+  if(sCsv) sCsv.onclick=()=>{ const t=document.getElementById('statsTable'); const rows=(t&&(t._exportCsv||t._export))||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsCSV(rows, statsTransposed?'financial_stats_transposed.csv':'financial_stats.csv'); };
+  if(sXls) sXls.onclick=()=>{ const t=document.getElementById('statsTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsXLS(rows, statsTransposed?'financial_stats_transposed.xlsx':'financial_stats.xlsx'); };
+  // Corr export
+  const cCsv=document.getElementById('corrCsvBtn'), cXls=document.getElementById('corrXlsBtn');
+  if(cCsv) cCsv.onclick=()=>{ const t=document.getElementById('corrTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsCSV(rows,'correlation_matrix.csv'); };
+  if(cXls) cXls.onclick=()=>{ const t=document.getElementById('corrTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsXLS(rows,'correlation_matrix.xlsx'); };
+  const cnCsv=document.getElementById('corrNegCsvBtn'), cnXls=document.getElementById('corrNegXlsBtn');
+  if(cnCsv) cCsv.onclick=()=>{ const t=document.getElementById('corrNegTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsCSV(rows,'correlation_matrix_negative_returns.csv'); };
+  if(cnXls) cXls.onclick=()=>{ const t=document.getElementById('corrNegTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsXLS(rows,'correlation_matrix_negative_returns.xlsx'); };
+});
+
+/* export helpers */
+function exportAsCSV(rows,name){ const header=Object.keys(rows[0]||{}); const lines=[header.join(',')]; for(const r of rows) lines.push(header.map(k=>r[k]??'').join(',')); downloadFile(name,lines.join('\n')); }
+function exportAsXLS(rows,name){ const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}); downloadFile(name,out,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
+
+/* file pills (robust) */
+function addFilePill(label,filename,statusText){
+  const pill=document.createElement('span'); pill.className='file-pill'; pill.dataset.lab=label;
+  const nm=document.createElement('span'); nm.className='name'; nm.textContent=filename||(label+'.csv');
+  const note=document.createElement('span'); note.className='note'; if(statusText) note.textContent=statusText;
+  const x=document.createElement('button'); x.className='xbtn'; x.type='button'; x.title='Remove'; x.setAttribute('aria-label','Remove'); x.textContent='✕';
+  pill.appendChild(nm); if(statusText) pill.appendChild(note); pill.appendChild(x);
+  const list=document.getElementById('fileList'); if(list) list.appendChild(pill);
+  return pill;
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.xbtn');
+  if (!btn) return;
+  const pill = btn.closest('.file-pill');
+  const list = document.getElementById('fileList');
+  if (!pill || !list || !list.contains(pill)) return;
+
+  const lab = pill.dataset.lab;
+  delete rawSeries[lab];
+  labels = Object.keys(rawSeries);
+  pill.remove();
+
+  if (labels.length === 0) {
+    merged = []; retSimple = {}; retLog = {}; equity = {}; drawdowns = {};
+    comboEnabled = false; saveComboState();
+    const enable = document.getElementById('comboEnable'); if (enable) enable.checked = false;
+    const comboCard = document.getElementById('comboCard'); if (comboCard) comboCard.classList.add('hidden');
+    clearVisuals();
+  } else {
+    computeReturns(); ensureComboWeights(); renderComboUI();
+  }
+  updateAll();
+  const fi = document.getElementById('fileInput'); if (fi) fi.value = '';
+});
+
+/* Adj Close / Close picker */
+function pickPriceField(fields){
+  const byNorm=new Map(); for(const f of fields) byNorm.set(norm(f),f);
+  const adj=['adjclose','adjustedclose','adjustedclosingprice','adjclosingprice','adjustedcloseprice']; for(const k of adj){ if(byNorm.has(k)) return byNorm.get(k); }
+  for(const [k,orig] of byNorm.entries()){ if(k==='close'||k==='closingprice'||k==='closeprice') return orig; }
+  for(const [k,orig] of byNorm.entries()){ if(k.includes('close')) return orig; }
+  return null;
+}
+
+/* main upload handler */
+async function handleUpload(fileList){
+  rawSeries={}; labels=[]; merged=[];
+  const list=document.getElementById('fileList'); if(list) list.innerHTML='';
+  updateDownloadState();
+  const card=document.getElementById('coverageCard'); if(card) card.classList.add('hidden');
+
+  const files=Array.from(fileList||[]); if(!files.length){ const fi=document.getElementById('fileInput'); if(fi) fi.value=''; return; }
+  let hadAnySuccess=false;
+  const isReturnsLike=(vals)=>{ const v=vals.filter(Number.isFinite); if(!v.length) return false; const u=v.filter(x=>Math.abs(x)<=2).length/v.length; return u>=0.95; };
+
+  for(const f of files){
+    const tempPill = addFilePill(f.name.replace(/\.csv$/i,''), f.name, '… loading');
+    try{
+      const res = await new Promise((resolve,reject)=>{
+        Papa.parse(f,{header:true,dynamicTyping:true,skipEmptyLines:true,encoding:'UTF-8',complete:r=>resolve(r),error:err=>reject(err)});
+      });
+
+      let fields=(res.meta && Array.isArray(res.meta.fields))?res.meta.fields.slice():[];
+      if(!fields.length && res.data && res.data.length){ fields=Object.keys(res.data[0]); }
+      if(fields.length<2){ if(tempPill){const n=tempPill.querySelector('.note'); if(n) n.textContent='(skipped: bad header)';} continue; }
+
+      const dateKey=fields[0];
+      let mode='price', valueKey=null;
+
+      if(fields.length>2){
+        valueKey=pickPriceField(fields);
+        if(!valueKey){ if(tempPill){const n=tempPill.querySelector('.note'); if(n) n.textContent='(skipped: no Adj Close/Close)';} continue; }
+      }else{
+        valueKey=fields[1];
+        if(!valueKey || !(valueKey in (res.data[0]||{}))){ const rowKeys=Object.keys(res.data[0]||{}); if(rowKeys.length>=2) valueKey=rowKeys[1]; }
+        const sample=res.data.map(r=>Number(r[valueKey])).filter(Number.isFinite); mode=isReturnsLike(sample)?'returns':'price';
       }
-    })();
 
-    // Utils
-    function toCsv(rows){ if(!rows.length) return ''; const h=Object.keys(rows[0]); const lines=[h.join(',')]; for(const r of rows){ lines.push(h.map(k=>r[k]??'').join(',')); } return lines.join('\n'); }
-    function downloadFile(name, content, mime='text/csv;charset=utf-8', addBOM=false){
-      let blob = (content instanceof Blob)? content : new Blob([ (addBOM && /^text\/csv/i.test(mime) ? '\uFEFF':'') + content ], {type:mime});
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); requestAnimationFrame(()=>{document.body.removeChild(a); URL.revokeObjectURL(a.href);});
-    }
-    const median = (a)=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y); const m=Math.floor(s.length/2); return s.length%2? s[m] : (s[m-1]+s[m])/2; };
-    function detectFrequency(dates){ if(dates.length<2) return 'daily'; const diffs=[]; for(let i=1;i<dates.length;i++) diffs.push((dates[i]-dates[i-1])/86400000); return median(diffs)<=10?'daily':'monthly'; }
-    function parseDateTimeKey(s){
-      const t = (s instanceof Date) ? s.toISOString() : String(s ?? '').trim(); if(!t) return null;
-      let d=null; for(const f of DATE_FORMATS){ const dd=dayjs(t,f,true); if(dd.isValid()){ d=dd.toDate(); break; } }
-      if(!d){ const di=dayjs(t); if(di.isValid()) d=di.toDate(); }
-      if(!d){ const dn=new Date(t); if(!isNaN(dn.getTime())) d=dn; }
-      if(!d) return null;
-      return { ts:d.getTime(), dayKey:d.toISOString().slice(0,10) };
-    }
-    function dateFromDayKey(k){ const [y,m,d]=k.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)); }
-    function intersectDates(map){
-      const arrs=Object.values(map); if(!arrs.length) return []; const sets=arrs.map(a=>new Set(a.map(d=>d.date.getTime())));
-      let common=sets[0]; for(let i=1;i<sets.length;i++){ const next=new Set(); for(const t of common) if(sets[i].has(t)) next.add(t); common=next; }
-      return Array.from(common).sort((a,b)=>a-b).map(t=>new Date(t));
-    }
-    function updateDownloadState(){ const enabled = labels.length>0 && merged.length>0 && withinRange().length>0; els.downloadMerged.disabled=!enabled; }
-    function clearVisuals(){ try{Plotly.purge(els.cumChart);}catch{} try{Plotly.purge(els.ddChart);}catch{} els.statsTable.innerHTML=''; els.corrTable.innerHTML=''; els.corrNegTable.innerHTML=''; els.rangeNote.textContent=''; }
+      const parsed=[]; for(const r of res.data){ const dd=parseDateTimeKey(r[dateKey]); const val=Number(r[valueKey]); if(!dd||!Number.isFinite(val)) continue; parsed.push({ts:dd.ts,dayKey:dd.dayKey,val}); }
+      parsed.sort((a,b)=>a.ts-b.ts);
 
-    // CSV handling
-    function pickPriceField(fields){
-      const norm=s=>String(s||'').toLowerCase().replace(/[^a-z]/g,'');
-      const m=new Map(fields.map((f,i)=>[norm(f),i]));
-      if(m.has('adjclose') || m.has('adjustedclose')) return fields[m.get(m.has('adjclose')?'adjclose':'adjustedclose')];
-      if(m.has('close')) return fields[m.get('close')];
-      return null;
+      const byDay=new Map(); for(const row of parsed){ const prev=byDay.get(row.dayKey); if(!prev||row.ts>=prev.ts) byDay.set(row.dayKey,row); }
+
+      let collapsed;
+      if(mode==='price'){ collapsed=Array.from(byDay.values()).sort((a,b)=>a.ts-b.ts).map(r=>({date:dateFromDayKey(r.dayKey), close:r.val})); }
+      else { const ordered=Array.from(byDay.values()).sort((a,b)=>a.ts-b.ts); let eq=1.0; collapsed=ordered.map(r=>{eq=eq*(1+r.val); return {date:dateFromDayKey(r.dayKey), close:eq};}); }
+
+      if(!collapsed.length){ if(tempPill){const n=tempPill.querySelector('.note'); if(n) n.textContent='(skipped: no rows)';} continue; }
+
+      const label=f.name.replace(/\.csv$/i,'').trim();
+      rawSeries[label]=collapsed; labels=Object.keys(rawSeries);
+      if(tempPill){const n=tempPill.querySelector('.note'); if(n) n.textContent=`(${collapsed.length} rows)`;}
+      hadAnySuccess=true;
+
+    }catch(err){
+      console.error(`Failed to parse "${f.name}":`, err);
+      if(tempPill){const n=tempPill.querySelector('.note'); if(n) n.textContent='(skipped: parse error)';}
+      continue;
     }
-    function isReturnsLike(vals){ const v=vals.filter(Number.isFinite); if(!v.length) return false; const share=v.filter(x=>Math.abs(x)<=2).length/v.length; return share>=0.95; }
+  }
 
-    function computeReturns(){
-      const common=intersectDates(rawSeries); const out=[];
-      for(const dt of common){ const row={Date:dt.toISOString().slice(0,10)}; for(const lab of labels){ const v=rawSeries[lab].find(x=>x.date.getTime()===dt.getTime()); row[lab]=v? v.close:undefined; } out.push(row); }
-      merged=out;
+  if(!hadAnySuccess || labels.length<1){ clearVisuals(); updateDownloadState(); const fi=document.getElementById('fileInput'); if(fi) fi.value=''; return; }
 
-      if(merged.length){
-        const dates = merged.map(r=>new Date(r.Date)); freq=detectFrequency(dates); $('#freqBadge').textContent=`Frequency: ${freq}`;
-        const min=merged[0].Date, max=merged[merged.length-1].Date;
-        els.startDate.min=min; els.startDate.max=max; els.endDate.min=min; els.endDate.max=max;
-        els.startDate.value=min; els.endDate.value=max; els.rangeNote.textContent=`${min} → ${max} (${merged.length} points)`;
-      } else {
-        freq=null; $('#freqBadge').textContent='–'; els.startDate.value=els.endDate.value=''; clearVisuals();
+  computeReturns(); ensureComboWeights(); renderComboUI(); updateAll();
+  const fi=document.getElementById('fileInput'); if(fi) fi.value='';
+}
+
+/* update pipeline */
+function updateAll(){
+  try { recomputeCombo(); } catch(e){ console.warn('updateAll: recomputeCombo failed', e); }
+  try { drawCharts(); } catch(e){ console.warn('updateAll: drawCharts failed', e); }
+  try { renderTimeline(); } catch(e){ console.warn('updateAll: timeline failed', e); }
+  try { renderStatsTable(); } catch(e){ console.warn('updateAll: stats failed', e); }
+  try { renderCorrTable(); } catch(e){ console.warn('updateAll: corr failed', e); }
+  try { renderCorrNegTable(); } catch(e){ console.warn('updateAll: corrNeg failed', e); }
+
+  const d = withinRange();
+  const rn=document.getElementById('rangeNote');
+  if (rn) rn.textContent = d.length ? `${d[0].Date} → ${d[d.length-1].Date} (${d.length} points)` : '';
+  updateDownloadState();
+}
+
+/* corr renders */
+function renderCorrTable(){
+  const table = document.getElementById('corrTable');
+  if (!table) { console.warn('corrTable missing; skipping render'); return; }
+
+  const {labels:L, matrix:M} = corrMatrix(false);
+  if (!L.length) { table.innerHTML=''; table._export=[]; return; }
+
+  let html = '<thead><tr><th>Ticker</th>' + L.map(l=>`<th>${l}</th>`).join('') + '</tr></thead><tbody>';
+  for (let i=0;i<L.length;i++){
+    html += `<tr><td>${L[i]}</td>`;
+    for (let j=0;j<L.length;j++){
+      const v = M[i][j];
+      const disp = (i===j)? '1.000' : (isFinite(v)? v.toFixed(3) : '—');
+      let cls = 'no-heat';
+      if (i!==j && isFinite(v)) {
+        const av = Math.abs(v);
+        if (av <= 0.6) cls='heat-0'; else if (av <= 0.8) cls='heat-1'; else cls='heat-2';
       }
+      if (i===j) cls='no-heat';
+      html += `<td class="${cls}">${disp}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
 
-      retSimple={}; retLog={}; equity={}; drawdowns={};
-      for(const lab of labels){
-        const p=merged.map(r=>Number(r[lab])); const rS=[], rL=[], eq=[1];
-        for(let i=1;i<p.length;i++){ const rs=p[i]/p[i-1]-1; rS.push(rs); rL.push(Math.log(p[i]/p[i-1])); eq.push(eq[eq.length-1]*(1+rs)); }
-        retSimple[lab]=rS; retLog[lab]=rL; equity[lab]=eq;
-        const dd=[]; let peak=eq[0]; for(const w of eq){ peak=Math.max(peak,w); dd.push(w/peak-1); } drawdowns[lab]=dd;
+  const exp=[];
+  for (let i=0;i<L.length;i++){
+    const row={Ticker:L[i]};
+    for (let j=0;j<L.length;j++) row[L[j]] = (i===j)?1:(isFinite(M[i][j])?Number(M[i][j].toFixed(6)):null);
+    exp.push(row);
+  }
+  table._export = exp;
+}
+function renderCorrNegTable(){
+  const table = document.getElementById('corrNegTable');
+  if (!table) { console.warn('corrNegTable missing; skipping render'); return; }
+
+  const {labels:L, matrix:M} = corrMatrix(true);
+  if (!L.length) { table.innerHTML=''; table._export=[]; return; }
+
+  let html = '<thead><tr><th>Ticker</th>' + L.map(l=>`<th>${l}</th>`).join('') + '</tr></thead><tbody>';
+  for (let i=0;i<L.length;i++){
+    html += `<tr><td>${L[i]}</td>`;
+    for (let j=0;j<L.length;j++){
+      const v = M[i][j];
+      const disp = (i===j)? '1.000' : (isFinite(v)? v.toFixed(3) : '—');
+      let cls = 'no-heat';
+      if (i!==j && isFinite(v)) {
+        const av = Math.abs(v);
+        if (av <= 0.6) cls='heat-0'; else if (av <= 0.8) cls='heat-1'; else cls='heat-2';
       }
-      updateDownloadState();
+      if (i===j) cls='no-heat';
+      html += `<td class="${cls}">${disp}</td>`;
     }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  table.innerHTML = html;
 
-    function ensureComboWeights(){
-      for(const lab of labels){ if(typeof comboWeights[lab] !== 'number' || !isFinite(comboWeights[lab])) comboWeights[lab]=100/labels.length; }
-      for(const k of Object.keys(comboWeights)) if(!labels.includes(k)) delete comboWeights[k];
-      localStorage.setItem(LSK.comboWeights, JSON.stringify(comboWeights));
-    }
-    function activeLabels(){ return comboEnabled? [...labels,'combo'] : labels; }
+  const exp=[];
+  for (let i=0;i<L.length;i++){
+    const row={Ticker:L[i]};
+    for (let j=0;j<L.length;j++) row[L[j]] = (i===j)?1:(isFinite(M[i][j])?Number(M[i][j].toFixed(6)):null);
+    exp.push(row);
+  }
+  table._export = exp;
+}
 
-    function computeComboSeries(){
-      const L=labels.slice(); if(!L.length || !merged.length) return null;
-      const total=L.reduce((a,l)=>a+(comboWeights[l]||0),0)||1; const w=Object.fromEntries(L.map(l=>[l,(comboWeights[l]||0)/total]));
-      const eq=[1], rS=[], rL=[];
-      for(let i=1;i<merged.length;i++){ let r=0; for(const lab of L){ const prev=merged[i-1][lab], cur=merged[i][lab]; r += w[lab]*(cur/prev-1); } rS.push(r); rL.push(Math.log(1+r)); eq.push(eq[eq.length-1]*(1+r)); }
-      const dd=[]; let peak=eq[0]; for(const v of eq){ peak=Math.max(peak,v); dd.push(v/peak-1); }
-      return {eq, rS, rL, dd};
-    }
-    function injectComboIntoMerged(){
-      if(!comboEnabled || !labels.length || !merged.length){ for(const row of merged) delete row['combo']; delete retSimple['combo']; delete retLog['combo']; delete equity['combo']; delete drawdowns['combo']; return; }
-      const c=computeComboSeries(); if(!c) return; for(let i=0;i<merged.length;i++) merged[i]['combo']=c.eq[i]; retSimple['combo']=c.rS; retLog['combo']=c.rL; equity['combo']=c.eq; drawdowns['combo']=c.dd;
-    }
-
-    function withinRange(){ if(!merged.length) return []; const s=els.startDate.value? new Date(els.startDate.value):new Date(merged[0].Date); const e=els.endDate.value? new Date(els.endDate.value):new Date(merged[merged.length-1].Date); return merged.filter(r=>{ const d=new Date(r.Date); return d>=s && d<=e; }); }
-    const annualizationFactor = ()=> freq==='daily'? 252 : 12;
-
-    function computeStats(){
-      if(!merged.length) return [];
-      const data=withinRange(); const af=annualizationFactor(); const years=data.length/af; const rows=[];
-      for(const lab of activeLabels()){
-        const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v)); if(prices.length<2) continue;
-        const total=prices[prices.length-1]/prices[0]; const CAGR=Math.pow(total,1/Math.max(years,1e-9))-1;
-        const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
-        const mean=rs.reduce((a,b)=>a+b,0)/rs.length; const sd=Math.sqrt(rs.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(rs.length-1||1));
-        const neg=rs.filter(x=>x<0); const sdNeg=neg.length? Math.sqrt(neg.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(neg.length-1||1)) : 0;
-        const vol=sd*Math.sqrt(af); const sharpe=sd? (mean/sd)*Math.sqrt(af):NaN; const sortino=sdNeg? (mean/sdNeg)*Math.sqrt(af):NaN;
-        let eq=[1],peak=1,maxDD=0,ddPerc=[]; for(const r of rs){ const w=eq[eq.length-1]*(1+r); eq.push(w); peak=Math.max(peak,w); const dd=w/peak-1; maxDD=Math.min(maxDD,dd); ddPerc.push(dd*100); }
-        const ulcer=ddPerc.length? Math.sqrt(ddPerc.reduce((a,b)=>a+b*b,0)/ddPerc.length):0; const UPI=ulcer? (CAGR*100)/ulcer:NaN;
-        const gain=rs.filter(x=>x>0).reduce((a,b)=>a+b,0), loss=Math.abs(rs.filter(x=>x<0).reduce((a,b)=>a+b,0)||NaN); const pf=gain/loss;
-        const calmar=Math.abs(maxDD)>0? CAGR/Math.abs(maxDD):NaN;
-        rows.push({Metric:lab, CAGR, MaxDrawdown:maxDD, Sharpe:sharpe, Sortino:sortino, UPI, Volatility:vol, ProfitFactor:pf, Calmar:calmar});
-      }
-      return rows;
-    }
-
-    function corrMatrix(negOnly=false){
-      const data=withinRange(); const R={};
-      for(const lab of activeLabels()){ const p=data.map(r=>Number(r[lab])); if(p.length<2) continue; const rs=[]; for(let i=1;i<p.length;i++) rs.push(p[i]/p[i-1]-1); R[lab]=rs; }
-      const L=Object.keys(R); const n=L.length; const M=Array.from({length:n},()=>Array(n).fill(1));
-      function corr(a,b){ const n=Math.min(a.length,b.length); if(n<2) return NaN; let sumA=0,sumB=0,k=0; for(let i=0;i<n;i++){ if(negOnly && !(a[i]<0 && b[i]<0)) continue; sumA+=a[i]; sumB+=b[i]; k++; } if(k<2) return NaN; const ma=sumA/k, mb=sumB/k; let num=0,da=0,db=0; for(let i=0;i<n;i++){ if(negOnly && !(a[i]<0 && b[i]<0)) continue; const xa=a[i]-ma, xb=b[i]-mb; num+=xa*xb; da+=xa*xa; db+=xb*xb; } return (da===0||db===0)? NaN : num/Math.sqrt(da*db); }
-      for(let i=0;i<n;i++) for(let j=0;j<n;j++) M[i][j]=(i===j)?1:corr(R[L[i]],R[L[j]]);
-      return {labels:L, matrix:M};
-    }
-
-    function fmtPct(x){ return isFinite(x)? (x*100).toFixed(2)+'%' : '—'; } function fmt(x){ return isFinite(x)? x.toFixed(3) : '—'; }
-
-    function renderStatsTable(){
-      const rows=computeStats(); if(!rows.length){ els.statsTable.innerHTML=''; return; }
-      const metrics=['CAGR','MaxDrawdown','Sharpe','Sortino','UPI','Volatility','ProfitFactor','Calmar'];
-      const friendly={CAGR:'CAGR', MaxDrawdown:'Max drawdown', Sharpe:'Sharpe', Sortino:'Sortino', UPI:'Ulcer Perf. Index', Volatility:'Volatility', ProfitFactor:'Profit factor', Calmar:'Calmar'};
-      if(!statsTransposed){
-        const headers=['Metric',friendly.CAGR,friendly.MaxDrawdown,friendly.Sharpe,friendly.Sortino,friendly.UPI,friendly.Volatility,friendly.ProfitFactor,friendly.Calmar];
-        let html='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>';
-        for(const r of rows){ html+='<tr>' + `<td>${r.Metric}</td>` + `<td>${fmtPct(r.CAGR)}</td>` + `<td>${fmtPct(r.MaxDrawdown)}</td>` + `<td>${fmt(r.Sharpe)}</td>` + `<td>${fmt(r.Sortino)}</td>` + `<td>${fmt(r.UPI)}</td>` + `<td>${fmtPct(r.Volatility/100)}</td>` + `<td>${fmt(r.ProfitFactor)}</td>` + `<td>${fmt(r.Calmar)}</td>` + '</tr>'; }
-        html+='</tbody>'; els.statsTable.innerHTML=html;
-        els.statsTable._export = rows.map(r=>({Ticker:r.Metric, CAGR:r.CAGR*100, MaxDrawdown:r.MaxDrawdown*100, Sharpe:r.Sharpe, Sortino:r.Sortino, UPI:r.UPI, Volatility:r.Volatility*100, ProfitFactor:r.ProfitFactor, Calmar:r.Calmar}));
-        els.statsTable._exportCsv = els.statsTable._export.map(r=>({Ticker:r.Ticker, CAGR:(r.CAGR??'').toFixed? r.CAGR.toFixed(3):'', MaxDrawdown:(r.MaxDrawdown??'').toFixed? r.MaxDrawdown.toFixed(3):'', Sharpe:(r.Sharpe??'').toFixed? r.Sharpe.toFixed(4):'', Sortino:(r.Sortino??'').toFixed? r.Sortino.toFixed(4):'', UPI:(r.UPI??'').toFixed? r.UPI.toFixed(4):'', Volatility:(r.Volatility??'').toFixed? r.Volatility.toFixed(3):'', ProfitFactor:(r.ProfitFactor??'').toFixed? r.ProfitFactor.toFixed(4):'', Calmar:(r.Calmar??'').toFixed? r.Calmar.toFixed(4):'' }));
-      } else {
-        const headers=['Metric',...activeLabels()]; let html='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>';
-        const by=Object.fromEntries(rows.map(r=>[r.Metric,r])); const rawOut=[], prettyOut=[];
-        for(const m of metrics){ const disp=friendly[m]; let tr=`<tr><td>${disp}</td>`; const rawRow={Metric:disp}, prettyRow={Metric:disp};
-          for(const lab of activeLabels()){ const r=by[lab]; const val=r? r[m] : NaN; let cell; if(m==='CAGR'||m==='MaxDrawdown') cell=fmtPct(val); else if(m==='Volatility') cell=fmtPct(val/100); else cell=fmt(val); tr+=`<td>${cell}</td>`;
-            rawRow[lab]=(m==='CAGR'||m==='MaxDrawdown'||m==='Volatility') ? (isFinite(val)? val*100:null) : (isFinite(val)? val:null);
-            prettyRow[lab]=isFinite(rawRow[lab])? ((m==='CAGR'||m==='MaxDrawdown'||m==='Volatility')? rawRow[lab].toFixed(3):rawRow[lab].toFixed(4)) : ''; }
-          tr+='</tr>'; html+=tr; rawOut.push(rawRow); prettyOut.push(prettyRow);
-        } html+='</tbody>'; els.statsTable.innerHTML=html; els.statsTable._export=rawOut; els.statsTable._exportCsv=prettyOut;
-      }
-    }
-
-    function renderCorrTableCommon(targetEl, negOnly){
-      const {labels:L, matrix:M}=corrMatrix(negOnly); if(!L.length){ targetEl.innerHTML=''; return; }
-      let html='<thead><tr><th>Ticker</th>'+L.map(l=>`<th>${l}</th>`).join('')+'</tr></thead><tbody>';
-      for(let i=0;i<L.length;i++){ html+=`<tr><td>${L[i]}</td>`; for(let j=0;j<L.length;j++){ const v=M[i][j]; const disp=(i===j)? '1.000' : (isFinite(v)? v.toFixed(3):'—'); let cls='no-heat'; if(i!==j && isFinite(v)){ const av=Math.abs(v); if(av<=0.6) cls='heat-0'; else if(av<=0.8) cls='heat-1'; else cls='heat-2'; } if(i===j) cls='no-heat'; html+=`<td class="${cls}">${disp}</td>`; } html+='</tr>'; } html+='</tbody>'; targetEl.innerHTML=html;
-      const exp=[]; for(let i=0;i<L.length;i++){ const row={Ticker:L[i]}; for(let j=0;j<L.length;j++) row[L[j]]=(i===j)?1:(isFinite(M[i][j])? Number(M[i][j].toFixed(6)):null); exp.push(row); } targetEl._export=exp;
-    }
-    const renderCorrTable = ()=>renderCorrTableCommon(els.corrTable,false);
-    const renderCorrNegTable = ()=>renderCorrTableCommon(els.corrNegTable,true);
-
-    function cumulativeSeries(mode, p){
-      const r=[]; for(let i=1;i<p.length;i++) r.push(p[i]/p[i-1]-1);
-      if(mode==='log'){ const c=[0]; let acc=0; for(const ri of r){ acc+=Math.log(1+ri); c.push(acc);} return {y:c, yHoverPct:c.map(x=>Math.exp(x)-1)}; }
-      let eq=[1]; for(const rr of r){ eq.push(eq[eq.length-1]*(1+rr)); } return {y:eq.map(x=>x-1)};
-    }
-
-    function installHoverLine(target){
-      const shape={type:'line', xref:'x', yref:'paper', x0:0, x1:0, y0:0, y1:1, layer:'above', visible:false, line:{color:'rgba(208,217,226,0.5)', width:1}};
-      Plotly.relayout(target, {shapes:[shape]});
-    }
-    function setHoverX(target, xval, visible){
-      const patch = visible? {'shapes[0].x0':xval,'shapes[0].x1':xval,'shapes[0].visible':true} : {'shapes[0].visible':false};
-      Plotly.relayout(target, patch);
-    }
-    function wireHoverSync(master, peer){
-      if(master._hoverWired) return; master._hoverWired=true;
-      master.on('plotly_hover',(ev)=>{ const x=(ev.points&&ev.points.length)? ev.points[0].x:null; if(x!=null){ setHoverX(master,x,true); setHoverX(peer,x,true);} });
-      master.on('plotly_unhover',()=>{ setHoverX(master,null,false); setHoverX(peer,null,false); });
-    }
-
-    function drawCharts(){
-      injectComboIntoMerged();
-      const data=withinRange(); if(!data.length){ clearVisuals(); return; }
-      const dates=data.map(r=>r.Date);
-      const mode=(els.retMode.querySelector('button.active').dataset.mode==='log')? 'log':'simple';
-
-      const tracesCum=[]; for(const lab of activeLabels()){ const p=data.map(r=>Number(r[lab])); const cum=cumulativeSeries(mode,p); const t={type:'scatter', mode:'lines', name:lab, x:dates, y:cum.y}; t.hovertemplate=(mode==='log')? `%{x}<br>${lab}: ln=%{y:.3f} (⇔ %{customdata:.2%})<extra></extra>`:`%{x}<br>${lab}: %{y:.2%}<extra></extra>`; if(mode==='log') t.customdata=cum.yHoverPct; tracesCum.push(t); }
-      Plotly.newPlot(els.cumChart, tracesCum, {
-        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-        xaxis:{gridcolor:'#1e2a36', showspikes:false},
-        yaxis: (mode==='log')? {title:'Cumulative log return (ln Wealth)', tickformat:'.3f', gridcolor:'#1e2a36'} : {title:'Cumulative return', tickformat:'.0%', gridcolor:'#1e2a36'},
-        margin:{l:70,r:20,t:10,b:40},
-        legend:{orientation:'h', bgcolor:'rgba(0,0,0,0)', font:{color:'#d0d9e2'}},
-        hovermode:'x unified', hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
-      }, {responsive:true, displaylogo:false, modeBarButtonsToAdd:['select2d','lasso2d']});
-      installHoverLine(els.cumChart);
-
-      const tracesDD=[]; for(const lab of activeLabels()){ const p=data.map(r=>Number(r[lab])); let eq=[1],peak=1; const dd=[0]; for(let i=1;i<p.length;i++){ const rr=p[i]/p[i-1]-1; const w=eq[eq.length-1]*(1+rr); eq.push(w); peak=Math.max(peak,w); dd.push(w/peak-1);} tracesDD.push({type:'scatter', mode:'lines', name:lab, x:dates, y:dd, hovertemplate:`%{x}<br>${lab}: %{y:.2%}<extra></extra>`}); }
-      Plotly.newPlot(els.ddChart, tracesDD, {
-        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-        xaxis:{gridcolor:'#1e2a36', showspikes:false}, yaxis:{tickformat:'.0%', gridcolor:'#1e2a36'},
-        margin:{l:60,r:20,t:10,b:40},
-        legend:{orientation:'h', bgcolor:'rgba(0,0,0,0)', font:{color:'#d0d9e2'}},
-        hovermode:'x unified', hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
-      }, {responsive:true, displaylogo:false});
-      installHoverLine(els.ddChart);
-
-      wireHoverSync(els.cumChart, els.ddChart);
-      wireHoverSync(els.ddChart, els.cumChart);
-    }
-
-    function applyQuickRange(tag){
-      if(!merged.length) return;
-      const allStart=merged[0].Date, allEnd=merged[merged.length-1].Date;
-      const end=dayjs(allEnd); let start=dayjs(allStart), yearStart=dayjs(allEnd).startOf('year');
-      if(tag==='10Y') start=end.subtract(10,'year'); if(tag==='5Y') start=end.subtract(5,'year'); if(tag==='1Y') start=end.subtract(1,'year'); if(tag==='YTD') start=yearStart; if(tag==='All') start=dayjs(allStart);
-      const clamp=dayjs.max(start, dayjs(allStart)).format('YYYY-MM-DD'); els.startDate.value=clamp; els.endDate.value=end.format('YYYY-MM-DD'); updateAll();
-    }
-
-    function recomputeCombo(){ ensureComboWeights(); injectComboIntoMerged(); }
-    function updateAll(){ recomputeCombo(); drawCharts(); renderStatsTable(); renderCorrTable(); renderCorrNegTable(); const d=withinRange(); if(d.length) els.rangeNote.textContent=`${d[0].Date} → ${d[d.length-1].Date} (${d.length} points)`; else els.rangeNote.textContent=''; updateDownloadState(); }
-
-    // UI wiring
-    els.fullRangeBtn.onclick=()=>{ if(!merged.length) return; els.startDate.value=merged[0].Date; els.endDate.value=merged[merged.length-1].Date; els.quickRanges.querySelectorAll('button').forEach(b=>b.classList.remove('active')); els.quickRanges.querySelector('[data-range="All"]').classList.add('active'); updateAll(); };
-    els.startDate.onchange=updateAll; els.endDate.onchange=updateAll;
-    els.downloadMerged.onclick=()=>{ if(els.downloadMerged.disabled) return; const rows=withinRange(); downloadFile('merged.csv', toCsv(rows), 'text/csv;charset=utf-8', true); };
-    els.retMode.addEventListener('click',(e)=>{ const b=e.target.closest('button'); if(!b) return; els.retMode.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); drawCharts(); });
-    els.quickRanges.addEventListener('click',(e)=>{ const b=e.target.closest('button'); if(!b) return; els.quickRanges.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); applyQuickRange(b.dataset.range); });
-
-    function exportAsCSV(rows,name){ if(!rows.length){ alert('Nothing to export.'); return; } const header=Object.keys(rows[0]); const lines=[header.join(',')]; for(const r of rows) lines.push(header.map(k=>r[k]??'').join(',')); downloadFile(name, lines.join('\n')); }
-    function exportAsXLS(rows,name){ if(!rows.length){ alert('Nothing to export.'); return; } const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}); downloadFile(name,out,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
-    $('#statsSwitchAxesBtn').onclick=()=>{ statsTransposed=!statsTransposed; localStorage.setItem(LSK.transpose, statsTransposed?'1':'0'); $('#statsSwitchAxesBtn').textContent = statsTransposed ? 'Switch axes (back)' : 'Switch axes'; renderStatsTable(); };
-    $('#statsSwitchAxesBtn').textContent = statsTransposed ? 'Switch axes (back)' : 'Switch axes';
-    els.statsCsvBtn.onclick=()=>exportAsCSV(els.statsTable._exportCsv || els.statsTable._export || [], statsTransposed?'financial_stats_transposed.csv':'financial_stats.csv');
-    els.statsXlsBtn.onclick=()=>exportAsXLS(els.statsTable._export || [], statsTransposed?'financial_stats_transposed.xlsx':'financial_stats.xlsx');
-    els.corrCsvBtn.onclick=()=>exportAsCSV(els.corrTable._export || [], 'correlation_matrix.csv');
-    els.corrXlsBtn.onclick=()=>exportAsXLS(els.corrTable._export || [], 'correlation_matrix.xlsx');
-    els.corrNegCsvBtn.onclick=()=>exportAsCSV(els.corrNegTable._export || [], 'correlation_matrix_negative_returns.csv');
-    els.corrNegXlsBtn.onclick=()=>exportAsXLS(els.corrNegTable._export || [], 'correlation_matrix_negative_returns.xlsx');
-
-    // Combo UI
-    function sanitizeNumber(s){ if(typeof s!=='string') s=String(s??''); s=s.replace(/[^0-9+\-\.eE]/g,''); const v=parseFloat(s); return Number.isFinite(v)? v:0; }
-    function readWeightsFromInputs(){ let sum=0, map={}; for(const lab of labels){ const input=document.querySelector(`input[data-lab="${lab}"]`); const v=sanitizeNumber(input? input.value:'0'); map[lab]=v; sum+=v; } return {sum,map}; }
-    function neededToHundred(sum){ const delta=100-sum; if(Math.abs(delta)<0.005) return 'perfect'; return delta>0? `add ${delta.toFixed(2)}%` : `remove ${Math.abs(delta).toFixed(2)}%`; }
-    function setComboTotalBadge(sum){ const hint=neededToHundred(sum); const suffix=(hint==='perfect')?' — perfect':` — ${hint}`; els.comboTotal.textContent=`Total: ${sum.toFixed(2)}%${suffix}`; els.comboTotal.classList.toggle('ok', hint==='perfect'); els.comboTotal.classList.toggle('warn', hint!=='perfect'); }
-    function updateComboTotalLive(){ const {sum}=readWeightsFromInputs(); setComboTotalBadge(sum); }
-    function updateComboUIValues(){ if(!labels.length){ els.comboTotal.textContent='Total: 0.00% — add 100.00%'; return; } let total=0; for(const lab of labels){ const el=document.querySelector(`input[data-lab="${lab}"]`); if(el) el.value=(comboWeights[lab]||0).toFixed(2); total+=comboWeights[lab]||0; } setComboTotalBadge(total); }
-    function rebalanceCombo(){ if(!labels.length) return; for(const lab of labels){ let v=Number(comboWeights[lab]); if(!isFinite(v)) v=0; comboWeights[lab]=Math.min(100,Math.max(0,v)); } let sum=labels.reduce((a,l)=>a+(comboWeights[l]||0),0); if(sum<=0){ const eq=100/labels.length; for(const lab of labels) comboWeights[lab]=eq; } else { const k=100/sum; for(const lab of labels) comboWeights[lab]=(comboWeights[lab]||0)*k; } updateComboUIValues(); }
-    function renderComboUI(){
-      if(!labels.length){ els.comboCard.classList.add('hidden'); return; }
-      els.comboCard.classList.remove('hidden'); els.comboWeights.innerHTML=''; const frag=document.createDocumentFragment();
-      for(const lab of labels){ const item=document.createElement('div'); item.className='weight-item'; item.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f1823;border:1px solid var(--border);padding:10px 12px;border-radius:12px;';
-        const lb=document.createElement('label'); lb.textContent=lab; const input=document.createElement('input'); input.type='text'; input.inputMode='decimal'; input.placeholder='0.00'; input.dataset.lab=lab;
-        input.style.cssText='width:120px;background:#0e151e;color:var(--fg);border:1px solid var(--border);padding:8px 10px;border-radius:10px;text-align:right;';
-        input.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ els.comboApplyBtn.click(); }}); input.addEventListener('input',updateComboTotalLive);
-        item.appendChild(lb); item.appendChild(input); frag.appendChild(item); }
-      els.comboWeights.appendChild(frag);
-      els.comboEnable.checked = comboEnabled && labels.length>0;
-      els.comboEnable.onchange=()=>{ comboEnabled=!!els.comboEnable.checked; localStorage.setItem(LSK.comboEnabled, comboEnabled?'1':'0'); recomputeCombo(); updateAll(); };
-      els.comboEqualBtn.onclick=()=>{ const eq=100/labels.length; for(const lab of labels) comboWeights[lab]=eq; updateComboUIValues(); updateComboTotalLive(); localStorage.setItem(LSK.comboWeights, JSON.stringify(comboWeights)); recomputeCombo(); updateAll(); };
-      els.comboApplyBtn.onclick=()=>{ const {map}=readWeightsFromInputs(); for(const lab of labels) comboWeights[lab]=map[lab]||0; rebalanceCombo(); localStorage.setItem(LSK.comboWeights, JSON.stringify(comboWeights)); recomputeCombo(); updateAll(); };
-      updateComboUIValues(); updateComboTotalLive();
-    }
-
-    // File pill helper
-    function addFilePill(label, filename){
-      const pill=document.createElement('span'); pill.className='file-pill'; pill.dataset.lab=label;
-      const nm=document.createElement('span'); nm.className='name'; nm.textContent=filename || (label+'.csv');
-      const x=document.createElement('button'); x.className='xbtn'; x.type='button'; x.title='Remove'; x.setAttribute('aria-label','Remove'); x.textContent='✕';
-      pill.appendChild(nm); pill.appendChild(x); els.fileList.appendChild(pill);
-    }
-    els.fileList.addEventListener('click',(e)=>{
-      const btn=e.target.closest('.xbtn'); if(!btn) return; const pill=btn.closest('.file-pill'); if(!pill) return; const lab=pill.dataset.lab; if(!lab) return;
-      delete rawSeries[lab]; labels=Object.keys(rawSeries); pill.remove();
-      if(labels.length===0){ merged=[]; retSimple={}; retLog={}; equity={}; drawdowns={}; comboEnabled=false; localStorage.setItem(LSK.comboEnabled,'0'); els.comboCard.classList.add('hidden'); clearVisuals(); }
-      else { computeReturns(); ensureComboWeights(); renderComboUI(); }
-      updateAll(); els.fileInput.value='';
-    });
-
-    // Upload
-    els.fileInput.addEventListener('change', async (e)=>{
-      rawSeries={}; labels=[]; merged=[]; els.fileList.innerHTML=''; updateDownloadState();
-      const files=Array.from(e.target.files||[]); if(!files.length){ els.fileInput.value=''; return; }
-      for(const f of files){
-        await new Promise(resolve=>{
-          Papa.parse(f,{header:true, dynamicTyping:true, skipEmptyLines:true, complete:(res)=>{
-            const fields=res.meta.fields||[]; if(fields.length<2){ alert(`File "${f.name}": expected at least 2 columns (Date, Value).`); resolve(); return; }
-            const dateKey=fields[0]; let valueKey=null, mode='price';
-            if(fields.length>2){ valueKey=pickPriceField(fields); if(!valueKey){ alert(`File "${f.name}": could not find an Adj Close or Close column.`); resolve(); return; } }
-            else { valueKey=fields[1]; const sample=res.data.map(r=>Number(r[valueKey])).filter(v=>Number.isFinite(v)); mode=isReturnsLike(sample)? 'returns':'price'; }
-            const rows=res.data.map(r=>{ const dd=parseDateTimeKey(r[dateKey]); const val=Number(r[valueKey]); return (dd && Number.isFinite(val))? {ts:dd.ts, dayKey:dd.dayKey, val}:null; }).filter(Boolean).sort((a,b)=>a.ts-b.ts);
-            const byDay=new Map(); for(const row of rows){ const prev=byDay.get(row.dayKey); if(!prev || row.ts>=prev.ts) byDay.set(row.dayKey,row); }
-            let collapsed; if(mode==='price'){ collapsed=Array.from(byDay.values()).sort((a,b)=>a.ts-b.ts).map(r=>({date:dateFromDayKey(r.dayKey), close:r.val})); } else {
-              const ordered=Array.from(byDay.values()).sort((a,b)=>a.ts-b.ts); let eq=1.0; collapsed=ordered.map(r=>{ eq=eq*(1+r.val); return {date:dateFromDayKey(r.dayKey), close:eq}; });
-            }
-            const label=f.name.replace(/\.csv$/i,'').trim(); rawSeries[label]=collapsed; addFilePill(label, f.name); resolve();
-          }});
-        });
-      }
-      labels=Object.keys(rawSeries); if(labels.length<1){ alert('Please upload at least one valid CSV with Date and price/returns.'); updateDownloadState(); els.fileInput.value=''; return; }
-      computeReturns(); ensureComboWeights(); renderComboUI(); updateAll(); els.fileInput.value='';
-    });
-
-    // Initial state
-    updateDownloadState();
-  </script>
+/* global error log */
+window.addEventListener('error',e=>console.error('Uncaught error:',e.error||e.message||e));
+window.addEventListener('unhandledrejection',e=>console.error('Unhandled promise rejection:',e.reason||e));
+</script>
 </body>
 </html>

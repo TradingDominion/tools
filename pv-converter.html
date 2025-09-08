@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV - Monthly Returns Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #2d2d2d;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            font-weight: 300;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #b0b0b0;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            box-sizing: border-box;
+            overflow-y: auto;
+            white-space: pre;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4a9eff;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        button {
+            background-color: #4a9eff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #3a8eef;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-button {
+            display: inline-block;
+            background-color: #4a9eff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: 500;
+        }
+
+        .upload-button:hover {
+            background-color: #3a8eef;
+        }
+
+        .separator {
+            border: none;
+            border-top: 1px solid #555;
+            margin: 40px 0;
+        }
+
+        .section-heading {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .message.success {
+            background-color: #2d5a2d;
+            border: 1px solid #4a7c4a;
+            color: #90ff90;
+        }
+
+        .message.error {
+            background-color: #5a2d2d;
+            border: 1px solid #7c4a4a;
+            color: #ff9090;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 10px;
+            color: #4a9eff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PV - Monthly returns converter</h1>
+        
+        <div class="form-group">
+            <label for="dataInput">PV - Monthly returns</label>
+            <textarea id="dataInput" placeholder="Paste your PV monthly returns data here..."></textarea>
+        </div>
+
+        <button id="convertBtn" onclick="convertData()">Convert</button>
+        
+        <div class="loading" id="loading">Processing data...</div>
+        <div class="message" id="message"></div>
+
+        <hr class="separator">
+
+        <h2 class="section-heading">PV - Excel file monthly returns converter</h2>
+        
+        <input type="file" id="excelFileInput" class="file-input" accept=".xlsx,.xls" onchange="handleExcelFile(event)">
+        <label for="excelFileInput" class="upload-button">Upload Excel file</label>
+        
+        <div class="loading" id="excelLoading" style="display: none;">Processing Excel file...</div>
+        <div class="message" id="excelMessage" style="display: none;"></div>
+    </div>
+
+    <script>
+        function getLastWeekday(year, month) {
+            // Create date for last day of month
+            const lastDay = new Date(year, month, 0);
+            let day = lastDay.getDate();
+            
+            // Get day of week (0 = Sunday, 6 = Saturday)
+            let dayOfWeek = new Date(year, month - 1, day).getDay();
+            
+            // If it's Saturday (6), go back to Friday
+            if (dayOfWeek === 6) {
+                day -= 1;
+            }
+            // If it's Sunday (0), go back to Friday
+            else if (dayOfWeek === 0) {
+                day -= 2;
+            }
+            
+            // Format as yyyy-mm-dd
+            const monthStr = month.toString().padStart(2, '0');
+            const dayStr = day.toString().padStart(2, '0');
+            return `${year}-${monthStr}-${dayStr}`;
+        }
+
+        function parsePercentage(percentStr) {
+            // Remove % sign and convert to decimal
+            const cleanStr = percentStr.replace('%', '').trim();
+            const number = parseFloat(cleanStr);
+            return number / 100;
+        }
+
+        function parseFlexibleDate(dateInput) {
+            // Handle Excel serial date numbers
+            if (typeof dateInput === 'number') {
+                // Excel date serial number (days since Jan 1, 1900)
+                const excelEpoch = new Date(1899, 11, 30); // Excel epoch
+                const date = new Date(excelEpoch.getTime() + (dateInput * 24 * 60 * 60 * 1000));
+                return date;
+            }
+
+            // Handle string dates
+            if (typeof dateInput === 'string') {
+                let dateStr = dateInput.trim();
+                
+                // Try common date formats
+                const formats = [
+                    // MM/DD/YYYY
+                    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+                    // DD/MM/YYYY
+                    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+                    // YYYY-MM-DD
+                    /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+                    // MM-DD-YYYY
+                    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+                    // DD-MM-YYYY
+                    /^(\d{1,2})-(\d{1,2})-(\d{4})$/
+                ];
+
+                // Try parsing with native Date constructor first
+                let date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+
+                // Try specific formats
+                for (let format of formats) {
+                    const match = dateStr.match(format);
+                    if (match) {
+                        let year, month, day;
+                        
+                        if (format.source.startsWith('^(\\d{4})')) {
+                            // YYYY-MM-DD format
+                            year = parseInt(match[1]);
+                            month = parseInt(match[2]);
+                            day = parseInt(match[3]);
+                        } else if (dateStr.includes('/') || dateStr.includes('-')) {
+                            // Assume MM/DD/YYYY or MM-DD-YYYY by default
+                            // But check if day > 12 to detect DD/MM format
+                            const first = parseInt(match[1]);
+                            const second = parseInt(match[2]);
+                            const third = parseInt(match[3]);
+                            
+                            if (third > 1000) {
+                                // Third part is year
+                                year = third;
+                                if (first > 12) {
+                                    // First part must be day, so DD/MM/YYYY
+                                    day = first;
+                                    month = second;
+                                } else if (second > 12) {
+                                    // Second part must be day, so MM/DD/YYYY
+                                    month = first;
+                                    day = second;
+                                } else {
+                                    // Ambiguous, assume MM/DD/YYYY
+                                    month = first;
+                                    day = second;
+                                }
+                            }
+                        }
+                        
+                        if (year && month && day) {
+                            date = new Date(year, month - 1, day);
+                            if (!isNaN(date.getTime())) {
+                                return date;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle Date objects
+            if (dateInput instanceof Date) {
+                return dateInput;
+            }
+
+            // If all else fails, throw an error
+            throw new Error(`Unable to parse date: ${dateInput}`);
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+        }
+
+        function hideMessage() {
+            const messageEl = document.getElementById('message');
+            messageEl.style.display = 'none';
+        }
+
+        function showLoading(show) {
+            const loadingEl = document.getElementById('loading');
+            loadingEl.style.display = show ? 'block' : 'none';
+        }
+
+        function showExcelMessage(text, type) {
+            const messageEl = document.getElementById('excelMessage');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+        }
+
+        function hideExcelMessage() {
+            const messageEl = document.getElementById('excelMessage');
+            messageEl.style.display = 'none';
+        }
+
+        function showExcelLoading(show) {
+            const loadingEl = document.getElementById('excelLoading');
+            loadingEl.style.display = show ? 'block' : 'none';
+        }
+
+        function handleExcelFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            hideExcelMessage();
+            showExcelLoading(true);
+
+            try {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get the first worksheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to array of arrays
+                        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        // Process the data
+                        processExcelData(rawData);
+                        
+                    } catch (error) {
+                        showExcelMessage(`Error reading Excel file: ${error.message}`, 'error');
+                        console.error('Excel processing error:', error);
+                    } finally {
+                        showExcelLoading(false);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showExcelMessage('Error reading file.', 'error');
+                    showExcelLoading(false);
+                };
+                
+                reader.readAsArrayBuffer(file);
+                
+            } catch (error) {
+                showExcelMessage(`Error processing file: ${error.message}`, 'error');
+                showExcelLoading(false);
+                console.error('File processing error:', error);
+            }
+        }
+
+        function processExcelData(rawData) {
+            try {
+                const results = [];
+                let dataStartRow = -1;
+                
+                // Find the row that contains "Period" and "Total Return" headers
+                for (let i = 0; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    if (row && row.length >= 2) {
+                        const col1 = String(row[0] || '').toLowerCase().trim();
+                        const col2 = String(row[1] || '').toLowerCase().trim();
+                        
+                        if (col1.includes('period') && col2.includes('total') && col2.includes('return')) {
+                            dataStartRow = i + 1; // Data starts on next row
+                            break;
+                        }
+                    }
+                }
+                
+                if (dataStartRow === -1) {
+                    throw new Error('Could not find header row with "Period" and "Total Return" columns.');
+                }
+                
+                // Process data rows
+                for (let i = dataStartRow; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    if (!row || row.length < 2) continue;
+                    
+                    const dateInput = row[0];
+                    const returnInput = row[1];
+                    
+                    // Skip empty rows
+                    if (!dateInput || !returnInput) continue;
+                    
+                    try {
+                        // Parse date using flexible parser
+                        const parsedDate = parseFlexibleDate(dateInput);
+                        const year = parsedDate.getFullYear();
+                        const month = parsedDate.getMonth() + 1; // JavaScript months are 0-indexed
+                        
+                        // Convert to last weekday of month
+                        const finalDate = getLastWeekday(year, month);
+                        
+                        // Parse return percentage
+                        let returnDecimal;
+                        if (typeof returnInput === 'string' && returnInput.includes('%')) {
+                            returnDecimal = parsePercentage(returnInput);
+                        } else if (typeof returnInput === 'number') {
+                            // Assume it's already a decimal if it's a number less than 1
+                            returnDecimal = returnInput > 1 ? returnInput / 100 : returnInput;
+                        } else {
+                            throw new Error(`Invalid return format: ${returnInput}`);
+                        }
+                        
+                        results.push({
+                            date: finalDate,
+                            return: returnDecimal
+                        });
+                        
+                    } catch (error) {
+                        console.warn(`Skipping row ${i + 1}: ${error.message}`);
+                        continue;
+                    }
+                }
+                
+                if (results.length === 0) {
+                    throw new Error('No valid data rows found in Excel file.');
+                }
+                
+                // Sort by date (newest first)
+                results.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // Generate and download CSV
+                generateAndDownloadCSV(results, 'excel');
+                
+            } catch (error) {
+                showExcelMessage(`Processing error: ${error.message}`, 'error');
+                console.error('Excel data processing error:', error);
+            }
+        }
+
+        function generateAndDownloadCSV(results, source) {
+            // Generate CSV content
+            let csvContent = 'Date, MonthlyReturn\n';
+            results.forEach(row => {
+                csvContent += `${row.date}, ${row.return}\n`;
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = source === 'excel' ? 'pv-excel-monthly-returns.csv' : 'pv-monthly-returns.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Show success message
+            const messageText = `Successfully converted ${results.length} records and downloaded CSV file.`;
+            if (source === 'excel') {
+                showExcelMessage(messageText, 'success');
+            } else {
+                showMessage(messageText, 'success');
+            }
+        }
+
+        function convertData() {
+            const input = document.getElementById('dataInput').value.trim();
+            const convertBtn = document.getElementById('convertBtn');
+            
+            hideMessage();
+            
+            if (!input) {
+                showMessage('Please paste your data first.', 'error');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                convertBtn.disabled = true;
+                
+                // Split input into lines and filter out empty lines
+                const lines = input.split('\n').filter(line => line.trim());
+                
+                if (lines.length < 3) {
+                    throw new Error('Data must contain at least a header row and one data row.');
+                }
+
+                const results = [];
+                
+                // Process each line starting from the 3rd line (skip headers)
+                for (let i = 2; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    // Split by tab or multiple spaces
+                    const columns = line.split(/\t+|\s{2,}/).map(col => col.trim());
+                    
+                    if (columns.length < 3) {
+                        console.warn(`Skipping line ${i + 1}: insufficient columns`);
+                        continue;
+                    }
+                    
+                    const year = parseInt(columns[0]);
+                    const month = parseInt(columns[1]);
+                    const returnStr = columns[2];
+                    
+                    // Validate data
+                    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+                        console.warn(`Skipping line ${i + 1}: invalid year/month`);
+                        continue;
+                    }
+                    
+                    if (!returnStr.includes('%')) {
+                        console.warn(`Skipping line ${i + 1}: return value doesn't contain %`);
+                        continue;
+                    }
+                    
+                    const date = getLastWeekday(year, month);
+                    const returnDecimal = parsePercentage(returnStr);
+                    
+                    results.push({
+                        date: date,
+                        return: returnDecimal
+                    });
+                }
+                
+                if (results.length === 0) {
+                    throw new Error('No valid data rows found. Please check your data format.');
+                }
+                
+                // Sort by date (newest first, as in the sample)
+                results.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // Generate and download CSV
+                generateAndDownloadCSV(results, 'manual');
+                
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+                console.error('Conversion error:', error);
+            } finally {
+                showLoading(false);
+                convertBtn.disabled = false;
+            }
+        }
+
+        // Allow Enter key to trigger conversion
+        document.getElementById('dataInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                convertData();
+            }
+        });
+    </script>
+</body>
+</html>

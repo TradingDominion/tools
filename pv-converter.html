@@ -441,8 +441,8 @@
                     throw new Error('No valid data rows found in Excel file.');
                 }
                 
-                // Sort by date (newest first)
-                results.sort((a, b) => new Date(b.date) - new Date(a.date));
+                // Sort by date (oldest first)
+                results.sort((a, b) => new Date(a.date) - new Date(b.date));
                 
                 // Generate and download CSV
                 generateAndDownloadCSV(results, 'excel');
@@ -545,8 +545,8 @@
                     throw new Error('No valid data rows found. Please check your data format.');
                 }
                 
-                // Sort by date (newest first, as in the sample)
-                results.sort((a, b) => new Date(b.date) - new Date(a.date));
+                // Sort by date (oldest first)
+                results.sort((a, b) => new Date(a.date) - new Date(b.date));
                 
                 // Generate and download CSV
                 generateAndDownloadCSV(results, 'manual');

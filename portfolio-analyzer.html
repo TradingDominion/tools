@@ -193,8 +193,22 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
 
   <!-- Charts -->
   <div class="grid cols-1">
-    <div class="card"><h3>Cumulative Returns</h3><div id="cumChart" class="chart wide"></div></div>
-    <div class="card"><h3>Drawdowns</h3><div id="ddChart" class="chart wide"></div></div>
+    <div class="card">
+      <h3>Cumulative Returns</h3>
+      <div class="toolbar">
+        <button class="btn secondary" id="cumReturnsCsvBtn">CSV</button>
+        <button class="btn secondary" id="cumReturnsXlsBtn">XLS</button>
+      </div>
+      <div id="cumChart" class="chart wide"></div>
+    </div>
+    <div class="card">
+      <h3>Drawdowns</h3>
+      <div class="toolbar">
+        <button class="btn secondary" id="drawdownsCsvBtn">CSV</button>
+        <button class="btn secondary" id="drawdownsXlsBtn">XLS</button>
+      </div>
+      <div id="ddChart" class="chart wide"></div>
+    </div>
   </div>
 
   <!-- Tables -->
@@ -651,11 +665,68 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const cnCsv=document.getElementById('corrNegCsvBtn'), cnXls=document.getElementById('corrNegXlsBtn');
   if(cnCsv) cCsv.onclick=()=>{ const t=document.getElementById('corrNegTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsCSV(rows,'correlation_matrix_negative_returns.csv'); };
   if(cnXls) cXls.onclick=()=>{ const t=document.getElementById('corrNegTable'); const rows=(t&&t._export)||[]; if(!rows.length){alert('Nothing to export.');return;} exportAsXLS(rows,'correlation_matrix_negative_returns.xlsx'); };
+
+  // Cumulative Returns export
+  const crCsv=document.getElementById('cumReturnsCsvBtn'), crXls=document.getElementById('cumReturnsXlsBtn');
+  if(crCsv) crCsv.onclick=()=>{ const data=prepareCumulativeReturnsExport(); if(!data.length){alert('No data to export.');return;} exportAsCSV(data,'cumulative_returns.csv'); };
+  if(crXls) crXls.onclick=()=>{ const data=prepareCumulativeReturnsExport(); if(!data.length){alert('No data to export.');return;} exportAsXLS(data,'cumulative_returns.xlsx'); };
+
+  // Drawdowns export
+  const ddCsv=document.getElementById('drawdownsCsvBtn'), ddXls=document.getElementById('drawdownsXlsBtn');
+  if(ddCsv) ddCsv.onclick=()=>{ const data=prepareDrawdownsExport(); if(!data.length){alert('No data to export.');return;} exportAsCSV(data,'drawdowns.csv'); };
+  if(ddXls) ddXls.onclick=()=>{ const data=prepareDrawdownsExport(); if(!data.length){alert('No data to export.');return;} exportAsXLS(data,'drawdowns.xlsx'); };
 });
 
 /* export helpers */
 function exportAsCSV(rows,name){ const header=Object.keys(rows[0]||{}); const lines=[header.join(',')]; for(const r of rows) lines.push(header.map(k=>r[k]??'').join(',')); downloadFile(name,lines.join('\n')); }
-function exportAsXLS(rows,name){ const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}); downloadFile(name,out,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }
+function exportAsXLS(rows,name){ const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Sheet1'); const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}); const blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}); downloadFile(name,blob); }
+
+/* data preparation for chart exports */
+function prepareCumulativeReturnsExport(){
+  const inRange = withinRange();
+  if(!inRange.length) return [];
+  const labs = activeLabels();
+  if(!labs.length) return [];
+
+  const rows = [];
+  for(let i=0; i<inRange.length; i++){
+    const row = { Date: inRange[i].Date };
+    for(const lab of labs){
+      const eqArr = equity[lab];
+      if(eqArr && i < eqArr.length){
+        // equity array starts at 1.0, cumulative return is equity - 1
+        row[lab] = eqArr[i] - 1;
+      } else {
+        row[lab] = '';
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function prepareDrawdownsExport(){
+  const inRange = withinRange();
+  if(!inRange.length) return [];
+  const labs = activeLabels();
+  if(!labs.length) return [];
+
+  const rows = [];
+  for(let i=0; i<inRange.length; i++){
+    const row = { Date: inRange[i].Date };
+    for(const lab of labs){
+      const ddArr = drawdowns[lab];
+      if(ddArr && i < ddArr.length){
+        // drawdowns are already in decimal format (negative values)
+        row[lab] = ddArr[i];
+      } else {
+        row[lab] = '';
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
 
 /* file pills (robust) */
 function addFilePill(label,filename,statusText){

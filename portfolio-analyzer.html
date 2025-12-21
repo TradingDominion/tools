@@ -436,7 +436,8 @@ function computeStats(){
     const ulcer=ddP.length?Math.sqrt(ddP.reduce((a,b)=>a+b*b,0)/ddP.length):0; const UPI=ulcer?(CAGR*100)/ulcer:NaN;
     const gain=rs.filter(x=>x>0).reduce((a,b)=>a+b,0); const loss=Math.abs(rs.filter(x=>x<0).reduce((a,b)=>a+b,0)||NaN); const pf=gain/loss;
     const calmar=Math.abs(maxDD)>0?CAGR/Math.abs(maxDD):NaN;
-    rows.push({Metric:lab,CAGR,MaxDrawdown:maxDD,Sharpe:sharpe,Sortino:sortino,UPI:ulcer?UPI:NaN,Volatility:vol,ProfitFactor:pf,Calmar:calmar});
+    const arithmeticMean=mean*af;
+    rows.push({Metric:lab,CAGR,ArithmeticMean:arithmeticMean,MaxDrawdown:maxDD,Sharpe:sharpe,Sortino:sortino,UPI:ulcer?UPI:NaN,Volatility:vol,ProfitFactor:pf,Calmar:calmar});
   }
   return rows;
 }
@@ -530,25 +531,26 @@ function renderStatsTable(){
   const rows = computeStats();
   if (!rows.length) { table.innerHTML = ''; table._export = []; table._exportCsv = []; return; }
 
-  const metrics = ['CAGR','MaxDrawdown','Sharpe','Sortino','UPI','Volatility','ProfitFactor','Calmar'];
+  const metrics = ['CAGR','ArithmeticMean','MaxDrawdown','Sharpe','Sortino','UPI','Volatility','ProfitFactor','Calmar'];
   const friendly = {
-    CAGR:'CAGR','MaxDrawdown':'Max drawdown','Sharpe':'Sharpe','Sortino':'Sortino',
+    CAGR:'CAGR','ArithmeticMean':'Arithmetic mean','MaxDrawdown':'Max drawdown','Sharpe':'Sharpe','Sortino':'Sortino',
     UPI:'Ulcer Perf. Index','Volatility':'Volatility','ProfitFactor':'Profit factor','Calmar':'Calmar'
   };
 
   if (!statsTransposed) {
-    const headers = ['Metric', friendly.CAGR, friendly.MaxDrawdown, friendly.Sharpe, friendly.Sortino,
+    const headers = ['Metric', friendly.CAGR, friendly.ArithmeticMean, friendly.MaxDrawdown, friendly.Sharpe, friendly.Sortino,
                      friendly.UPI, friendly.Volatility, friendly.ProfitFactor, friendly.Calmar];
     let html = '<thead><tr>' + headers.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>';
     for (const r of rows) {
       html += '<tr>'
         + `<td>${r.Metric}</td>`
         + `<td>${fmtPct(r.CAGR)}</td>`
+        + `<td>${fmtPct(r.ArithmeticMean)}</td>`
         + `<td>${fmtPct(r.MaxDrawdown)}</td>`
         + `<td>${fmt(r.Sharpe)}</td>`
         + `<td>${fmt(r.Sortino)}</td>`
         + `<td>${fmt(r.UPI)}</td>`
-        + `<td>${fmtPct(r.Volatility/100)}</td>`
+        + `<td>${fmtPct(r.Volatility)}</td>`
         + `<td>${fmt(r.ProfitFactor)}</td>`
         + `<td>${fmt(r.Calmar)}</td>`
         + '</tr>';
@@ -557,12 +559,13 @@ function renderStatsTable(){
     table.innerHTML = html;
 
     const raw = rows.map(r=>({
-      Ticker:r.Metric, CAGR:r.CAGR*100, MaxDrawdown:r.MaxDrawdown*100, Sharpe:r.Sharpe,
+      Ticker:r.Metric, CAGR:r.CAGR*100, ArithmeticMean:r.ArithmeticMean*100, MaxDrawdown:r.MaxDrawdown*100, Sharpe:r.Sharpe,
       Sortino:r.Sortino, UPI:r.UPI, Volatility:r.Volatility*100, ProfitFactor:r.ProfitFactor, Calmar:r.Calmar
     }));
     const pretty = raw.map(r=>({
       Ticker:r.Ticker,
       CAGR: isFinite(r.CAGR)? r.CAGR.toFixed(3):'',
+      ArithmeticMean: isFinite(r.ArithmeticMean)? r.ArithmeticMean.toFixed(3):'',
       MaxDrawdown: isFinite(r.MaxDrawdown)? r.MaxDrawdown.toFixed(3):'',
       Sharpe: isFinite(r.Sharpe)? r.Sharpe.toFixed(4):'',
       Sortino: isFinite(r.Sortino)? r.Sortino.toFixed(4):'',
@@ -587,17 +590,16 @@ function renderStatsTable(){
     for (const lab of activeLabels()) {
       const r = by[lab]; const val = r ? r[m] : NaN;
       let cell;
-      if (m==='CAGR'||m==='MaxDrawdown') cell = fmtPct(val);
-      else if (m==='Volatility') cell = fmtPct(val/100);
+      if (m==='CAGR'||m==='ArithmeticMean'||m==='MaxDrawdown'||m==='Volatility') cell = fmtPct(val);
       else cell = fmt(val);
       tr += `<td>${cell}</td>`;
 
-      const rawVal = (m==='CAGR'||m==='MaxDrawdown'||m==='Volatility')
+      const rawVal = (m==='CAGR'||m==='ArithmeticMean'||m==='MaxDrawdown'||m==='Volatility')
         ? (isFinite(val)? val*100 : null)
         : (isFinite(val)? val : null);
       rawRow[lab] = rawVal;
       prettyRow[lab] = isFinite(rawVal)
-        ? ((m==='CAGR'||m==='MaxDrawdown'||m==='Volatility') ? rawVal.toFixed(3) : rawVal.toFixed(4))
+        ? ((m==='CAGR'||m==='ArithmeticMean'||m==='MaxDrawdown'||m==='Volatility') ? rawVal.toFixed(3) : rawVal.toFixed(4))
         : '';
     }
     tr += '</tr>';

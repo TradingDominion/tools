@@ -282,6 +282,8 @@ Date,Return
 Current branch: `main`
 Remote: https://github.com/TradingDominion/tools
 
+**IMPORTANT**: Do NOT automatically suggest doing `git add`, `git commit`, or `git push` after completing a feature or making changes. Wait for the user to explicitly ask you to commit and push changes.
+
 Standard workflow:
 ```bash
 git status                           # Check current state

@@ -211,6 +211,24 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
     </div>
   </div>
 
+  <!-- Rolling Sharpe Ratio -->
+  <div class="grid cols-1" style="margin-top:16px">
+    <div class="card">
+      <h3>Rolling Sharpe Ratio</h3>
+      <div id="rollingSharpeChart" class="chart wide"></div>
+      <div class="footnote" id="rollingSharpeNote"></div>
+    </div>
+  </div>
+
+  <!-- Rolling UPI -->
+  <div class="grid cols-1" style="margin-top:16px">
+    <div class="card">
+      <h3>Rolling UPI</h3>
+      <div id="rollingUpiChart" class="chart wide"></div>
+      <div class="footnote" id="rollingUpiNote"></div>
+    </div>
+  </div>
+
   <!-- Tables -->
   <div class="grid cols-2" style="margin-top:16px">
     <div class="card">
@@ -452,6 +470,82 @@ function corrMatrix(negOnly=false){
   return {labels:L,matrix:M};
 }
 
+/* rolling sharpe ratio */
+function computeRollingSharpe(){
+  const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
+  const af=annualizationFactor();
+  // Window size: 252 days for daily data, 36 months for monthly data
+  const windowSize=freq==='daily'?252:36;
+  if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
+
+  const series={};
+  for(const lab of activeLabels()){
+    const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v));
+    if(prices.length<windowSize+1) continue;
+
+    const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
+    const sharpes=[];
+
+    for(let i=windowSize;i<=rs.length;i++){
+      const window=rs.slice(i-windowSize,i);
+      const mean=window.reduce((a,b)=>a+b,0)/window.length;
+      const sd=Math.sqrt(window.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(window.length-1||1));
+      const sharpe=sd?(mean/sd)*Math.sqrt(af):NaN;
+      sharpes.push(sharpe);
+    }
+    series[lab]=sharpes;
+  }
+
+  const dates=data.slice(windowSize).map(r=>r.Date);
+  return {dates,series,windowSize,freq};
+}
+
+/* rolling UPI */
+function computeRollingUpi(){
+  const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
+  const af=annualizationFactor();
+  // Window size: 252 days for daily data, 36 months for monthly data
+  const windowSize=freq==='daily'?252:36;
+  if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
+
+  const series={};
+  for(const lab of activeLabels()){
+    const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v));
+    if(prices.length<windowSize+1) continue;
+
+    const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
+    const upis=[];
+
+    for(let i=windowSize;i<=rs.length;i++){
+      const window=rs.slice(i-windowSize,i);
+
+      // Calculate equity curve and drawdowns for the window
+      let eq=[1],peak=1; const ddP=[];
+      for(const r of window){
+        const w=eq.at(-1)*(1+r);
+        eq.push(w);
+        peak=Math.max(peak,w);
+        const dd=w/peak-1;
+        ddP.push(dd*100);
+      }
+
+      // Calculate CAGR for the window
+      const total=eq.at(-1)/eq[0];
+      const windowYears=window.length/af;
+      const cagr=Math.pow(total,1/Math.max(windowYears,1e-9))-1;
+
+      // Calculate Ulcer Index and UPI
+      const ulcer=ddP.length?Math.sqrt(ddP.reduce((a,b)=>a+b*b,0)/ddP.length):0;
+      const upi=ulcer?(cagr*100)/ulcer:NaN;
+      upis.push(upi);
+    }
+    series[lab]=upis;
+  }
+
+  const dates=data.slice(windowSize).map(r=>r.Date);
+  return {dates,series,windowSize,freq};
+}
+
 /* charts */
 function cumulativeSeries(mode,prices){
   const r=[]; for(let i=1;i<prices.length;i++) r.push(prices[i]/prices[i-1]-1);
@@ -514,6 +608,90 @@ function drawCharts(){
     function wire(a,b){ if(!a||a._wired) return; a._wired=true; a.on('plotly_hover',ev=>{const x=ev.points?.[0]?.x; if(x!=null){setX(a,x,true); setX(b,x,true);}}); a.on('plotly_unhover',()=>{setX(a,null,false); setX(b,null,false);}); }
     line(cumEl); line(ddEl); wire(cumEl,ddEl); wire(ddEl,cumEl);
   }catch(e){ console.warn('drawCharts drawdown failed:',e); }
+}
+
+function drawRollingSharpeChart(){
+  const el=document.getElementById('rollingSharpeChart');
+  const note=document.getElementById('rollingSharpeNote');
+  if(!el){ console.warn('rollingSharpeChart container missing; skipping'); return; }
+
+  const {dates,series,windowSize,freq}=computeRollingSharpe();
+  if(!dates.length){
+    try{Plotly.purge(el);}catch{}
+    if(note) note.textContent='';
+    return;
+  }
+
+  // Update footnote with window size info
+  if(note){
+    const windowDesc=freq==='daily'?'252 days (~1 year)':'36 months (3 years)';
+    note.textContent=`Rolling window: ${windowDesc}. Assumes risk-free rate = 0.`;
+  }
+
+  const traces=[];
+  for(const lab of Object.keys(series)){
+    traces.push({
+      type:'scatter',
+      mode:'lines',
+      name:lab,
+      x:dates,
+      y:series[lab],
+      hovertemplate:`%{x}<br>${lab}: %{y:.3f}<extra></extra>`
+    });
+  }
+
+  Plotly.newPlot(el,traces,{
+    paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',
+    xaxis:{gridcolor:'#1e2a36',showspikes:false},
+    yaxis:{title:'Rolling Sharpe Ratio',gridcolor:'#1e2a36'},
+    margin:{l:60,r:20,t:10,b:40},
+    legend:{orientation:'h',bgcolor:'rgba(0,0,0,0)',font:{color:'#d0d9e2'}},
+    hovermode:'x unified',
+    hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
+  },{responsive:true,displaylogo:false});
+}
+
+function drawRollingUpiChart(){
+  const el=document.getElementById('rollingUpiChart');
+  const note=document.getElementById('rollingUpiNote');
+  if(!el){ console.warn('rollingUpiChart container missing; skipping'); return; }
+
+  const {dates,series,windowSize,freq}=computeRollingUpi();
+  if(!dates.length){
+    try{Plotly.purge(el);}catch{}
+    if(note) note.textContent='';
+    return;
+  }
+
+  // Update footnote with window size info
+  if(note){
+    const windowDesc=freq==='daily'?'252 days (~1 year)':'36 months (3 years)';
+    note.textContent=`Rolling window: ${windowDesc}. UPI = CAGR / Ulcer Index.`;
+  }
+
+  const traces=[];
+  for(const lab of Object.keys(series)){
+    traces.push({
+      type:'scatter',
+      mode:'lines',
+      name:lab,
+      x:dates,
+      y:series[lab],
+      hovertemplate:`%{x}<br>${lab}: %{y:.3f}<extra></extra>`
+    });
+  }
+
+  Plotly.newPlot(el,traces,{
+    paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',
+    xaxis:{gridcolor:'#1e2a36',showspikes:false},
+    yaxis:{title:'Rolling UPI',gridcolor:'#1e2a36'},
+    margin:{l:60,r:20,t:10,b:40},
+    legend:{orientation:'h',bgcolor:'rgba(0,0,0,0)',font:{color:'#d0d9e2'}},
+    hovermode:'x unified',
+    hoverlabel:{bgcolor:'#0f1823',bordercolor:'#2b3b4d',font:{color:'#e5edf5'}}
+  },{responsive:true,displaylogo:false});
 }
 
 /* quick ranges */
@@ -841,6 +1019,8 @@ async function handleUpload(fileList){
 function updateAll(){
   try { recomputeCombo(); } catch(e){ console.warn('updateAll: recomputeCombo failed', e); }
   try { drawCharts(); } catch(e){ console.warn('updateAll: drawCharts failed', e); }
+  try { drawRollingSharpeChart(); } catch(e){ console.warn('updateAll: rollingSharpe failed', e); }
+  try { drawRollingUpiChart(); } catch(e){ console.warn('updateAll: rollingUpi failed', e); }
   try { renderTimeline(); } catch(e){ console.warn('updateAll: timeline failed', e); }
   try { renderStatsTable(); } catch(e){ console.warn('updateAll: stats failed', e); }
   try { renderCorrTable(); } catch(e){ console.warn('updateAll: corr failed', e); }

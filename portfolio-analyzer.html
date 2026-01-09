@@ -216,10 +216,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <h3 style="margin:0">Rolling Sharpe Ratio</h3>
-        <div class="toggle" id="sharpeWindowToggle">
-          <button data-window="60">60d</button>
-          <button data-window="126">126d</button>
-          <button data-window="252" class="active">252d</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:0.9em;color:var(--fg);opacity:0.7">Rolling window:</span>
+          <div class="toggle" id="sharpeWindowToggle">
+            <button data-window="60">3M</button>
+            <button data-window="126">6M</button>
+            <button data-window="252" class="active">12M</button>
+          </div>
         </div>
       </div>
       <div id="rollingSharpeChart" class="chart wide"></div>
@@ -232,10 +235,13 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <h3 style="margin:0">Rolling UPI</h3>
-        <div class="toggle" id="upiWindowToggle">
-          <button data-window="60">60d</button>
-          <button data-window="126">126d</button>
-          <button data-window="252" class="active">252d</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:0.9em;color:var(--fg);opacity:0.7">Rolling window:</span>
+          <div class="toggle" id="upiWindowToggle">
+            <button data-window="60">3M</button>
+            <button data-window="126">6M</button>
+            <button data-window="252" class="active">12M</button>
+          </div>
         </div>
       </div>
       <div id="rollingUpiChart" class="chart wide"></div>
@@ -487,15 +493,19 @@ function corrMatrix(negOnly=false){
 
 /* rolling sharpe ratio */
 function computeRollingSharpe(){
-  const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
+  if(!merged.length) return {dates:[],series:{},windowSize:0,freq:null};
   const af=annualizationFactor();
   // Window size: user-selected for daily data, 36 months for monthly data
   const windowSize=freq==='daily'?rollingWindowSharpe:36;
   if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
 
+  // Use full merged data for calculation, then filter to date range
+  const allData=merged;
   const series={};
+  const allDates=[];
+
   for(const lab of activeLabels()){
-    const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v));
+    const prices=allData.map(r=>Number(r[lab])).filter(v=>isFinite(v));
     if(prices.length<windowSize+1) continue;
 
     const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
@@ -511,21 +521,42 @@ function computeRollingSharpe(){
     series[lab]=sharpes;
   }
 
-  const dates=data.slice(windowSize).map(r=>r.Date);
-  return {dates,series,windowSize,freq};
+  // Get all dates after window
+  for(let i=windowSize;i<allData.length;i++) allDates.push(allData[i].Date);
+
+  // Filter to selected date range
+  const rangeData=withinRange();
+  if(!rangeData.length) return {dates:[],series:{},windowSize,freq};
+  const startDate=rangeData[0].Date, endDate=rangeData[rangeData.length-1].Date;
+  const filtered={dates:[],series:{}};
+  for(let i=0;i<allDates.length;i++){
+    if(allDates[i]>=startDate && allDates[i]<=endDate){
+      filtered.dates.push(allDates[i]);
+      for(const lab of Object.keys(series)){
+        if(!filtered.series[lab]) filtered.series[lab]=[];
+        filtered.series[lab].push(series[lab][i]);
+      }
+    }
+  }
+
+  return {dates:filtered.dates,series:filtered.series,windowSize,freq};
 }
 
 /* rolling UPI */
 function computeRollingUpi(){
-  const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
+  if(!merged.length) return {dates:[],series:{},windowSize:0,freq:null};
   const af=annualizationFactor();
   // Window size: user-selected for daily data, 36 months for monthly data
   const windowSize=freq==='daily'?rollingWindowUpi:36;
   if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
 
+  // Use full merged data for calculation, then filter to date range
+  const allData=merged;
   const series={};
+  const allDates=[];
+
   for(const lab of activeLabels()){
-    const prices=data.map(r=>Number(r[lab])).filter(v=>isFinite(v));
+    const prices=allData.map(r=>Number(r[lab])).filter(v=>isFinite(v));
     if(prices.length<windowSize+1) continue;
 
     const rs=[]; for(let i=1;i<prices.length;i++) rs.push(prices[i]/prices[i-1]-1);
@@ -557,8 +588,25 @@ function computeRollingUpi(){
     series[lab]=upis;
   }
 
-  const dates=data.slice(windowSize).map(r=>r.Date);
-  return {dates,series,windowSize,freq};
+  // Get all dates after window
+  for(let i=windowSize;i<allData.length;i++) allDates.push(allData[i].Date);
+
+  // Filter to selected date range
+  const rangeData=withinRange();
+  if(!rangeData.length) return {dates:[],series:{},windowSize,freq};
+  const startDate=rangeData[0].Date, endDate=rangeData[rangeData.length-1].Date;
+  const filtered={dates:[],series:{}};
+  for(let i=0;i<allDates.length;i++){
+    if(allDates[i]>=startDate && allDates[i]<=endDate){
+      filtered.dates.push(allDates[i]);
+      for(const lab of Object.keys(series)){
+        if(!filtered.series[lab]) filtered.series[lab]=[];
+        filtered.series[lab].push(series[lab][i]);
+      }
+    }
+  }
+
+  return {dates:filtered.dates,series:filtered.series,windowSize,freq};
 }
 
 /* charts */

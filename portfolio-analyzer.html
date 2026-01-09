@@ -214,7 +214,14 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
   <!-- Rolling Sharpe Ratio -->
   <div class="grid cols-1" style="margin-top:16px">
     <div class="card">
-      <h3>Rolling Sharpe Ratio</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0">Rolling Sharpe Ratio</h3>
+        <div class="toggle" id="sharpeWindowToggle">
+          <button data-window="60">60d</button>
+          <button data-window="126">126d</button>
+          <button data-window="252" class="active">252d</button>
+        </div>
+      </div>
       <div id="rollingSharpeChart" class="chart wide"></div>
       <div class="footnote" id="rollingSharpeNote"></div>
     </div>
@@ -223,7 +230,14 @@ input[type="date"]::-webkit-calendar-picker-indicator{display:none !important;po
   <!-- Rolling UPI -->
   <div class="grid cols-1" style="margin-top:16px">
     <div class="card">
-      <h3>Rolling UPI</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <h3 style="margin:0">Rolling UPI</h3>
+        <div class="toggle" id="upiWindowToggle">
+          <button data-window="60">60d</button>
+          <button data-window="126">126d</button>
+          <button data-window="252" class="active">252d</button>
+        </div>
+      </div>
       <div id="rollingUpiChart" class="chart wide"></div>
       <div class="footnote" id="rollingUpiNote"></div>
     </div>
@@ -281,6 +295,7 @@ const DATE_FORMATS = [
   'DD/MM/YYYY HH:mm','DD/MM/YYYY HH:mm:ss'
 ];
 let rawSeries={}, merged=[], retSimple={}, retLog={}, equity={}, drawdowns={}, freq=null, labels=[];
+let rollingWindowSharpe=252, rollingWindowUpi=252; // default window sizes for daily data
 const LSK={transpose:'pa_stats_transposed', comboEnabled:'pa_combo_enabled', comboWeights:'pa_combo_weights'};
 let statsTransposed=localStorage.getItem(LSK.transpose)==='1';
 let comboEnabled=localStorage.getItem(LSK.comboEnabled)==='1';
@@ -474,8 +489,8 @@ function corrMatrix(negOnly=false){
 function computeRollingSharpe(){
   const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
   const af=annualizationFactor();
-  // Window size: 252 days for daily data, 36 months for monthly data
-  const windowSize=freq==='daily'?252:36;
+  // Window size: user-selected for daily data, 36 months for monthly data
+  const windowSize=freq==='daily'?rollingWindowSharpe:36;
   if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
 
   const series={};
@@ -504,8 +519,8 @@ function computeRollingSharpe(){
 function computeRollingUpi(){
   const data=withinRange(); if(!data.length) return {dates:[],series:{},windowSize:0,freq:null};
   const af=annualizationFactor();
-  // Window size: 252 days for daily data, 36 months for monthly data
-  const windowSize=freq==='daily'?252:36;
+  // Window size: user-selected for daily data, 36 months for monthly data
+  const windowSize=freq==='daily'?rollingWindowUpi:36;
   if(windowSize<2) return {dates:[],series:{},windowSize:0,freq};
 
   const series={};
@@ -613,9 +628,14 @@ function drawCharts(){
 function drawRollingSharpeChart(){
   const el=document.getElementById('rollingSharpeChart');
   const note=document.getElementById('rollingSharpeNote');
+  const toggle=document.getElementById('sharpeWindowToggle');
   if(!el){ console.warn('rollingSharpeChart container missing; skipping'); return; }
 
   const {dates,series,windowSize,freq}=computeRollingSharpe();
+
+  // Show/hide window size toggle based on data frequency
+  if(toggle) toggle.style.display=freq==='daily'?'flex':'none';
+
   if(!dates.length){
     try{Plotly.purge(el);}catch{}
     if(note) note.textContent='';
@@ -624,7 +644,13 @@ function drawRollingSharpeChart(){
 
   // Update footnote with window size info
   if(note){
-    const windowDesc=freq==='daily'?'252 days (~1 year)':'36 months (3 years)';
+    let windowDesc;
+    if(freq==='daily'){
+      const labels={60:'~3 months',126:'~6 months',252:'~1 year'};
+      windowDesc=`${windowSize} days (${labels[windowSize]||''})`;
+    } else {
+      windowDesc='36 months (3 years)';
+    }
     note.textContent=`Rolling window: ${windowDesc}. Assumes risk-free rate = 0.`;
   }
 
@@ -655,9 +681,14 @@ function drawRollingSharpeChart(){
 function drawRollingUpiChart(){
   const el=document.getElementById('rollingUpiChart');
   const note=document.getElementById('rollingUpiNote');
+  const toggle=document.getElementById('upiWindowToggle');
   if(!el){ console.warn('rollingUpiChart container missing; skipping'); return; }
 
   const {dates,series,windowSize,freq}=computeRollingUpi();
+
+  // Show/hide window size toggle based on data frequency
+  if(toggle) toggle.style.display=freq==='daily'?'flex':'none';
+
   if(!dates.length){
     try{Plotly.purge(el);}catch{}
     if(note) note.textContent='';
@@ -666,7 +697,13 @@ function drawRollingUpiChart(){
 
   // Update footnote with window size info
   if(note){
-    const windowDesc=freq==='daily'?'252 days (~1 year)':'36 months (3 years)';
+    let windowDesc;
+    if(freq==='daily'){
+      const labels={60:'~3 months',126:'~6 months',252:'~1 year'};
+      windowDesc=`${windowSize} days (${labels[windowSize]||''})`;
+    } else {
+      windowDesc='36 months (3 years)';
+    }
     note.textContent=`Rolling window: ${windowDesc}. UPI = CAGR / Ulcer Index.`;
   }
 
@@ -819,6 +856,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   if(rm) rm.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; rm.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); drawCharts();});
   const qr=document.getElementById('quickRanges');
   if(qr) qr.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; qr.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); applyQuickRange(b.dataset.range);});
+
+  // Rolling window size toggles
+  const swt=document.getElementById('sharpeWindowToggle');
+  if(swt) swt.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b||!b.dataset.window) return; swt.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); rollingWindowSharpe=parseInt(b.dataset.window,10); drawRollingSharpeChart();});
+  const uwt=document.getElementById('upiWindowToggle');
+  if(uwt) uwt.addEventListener('click',e=>{const b=e.target.closest('button'); if(!b||!b.dataset.window) return; uwt.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); rollingWindowUpi=parseInt(b.dataset.window,10); drawRollingUpiChart();});
 
   /* robust file input wiring: only 'change' + in-flight guard to prevent duplicates */
   const inp=document.getElementById('fileInput');
